@@ -1,4 +1,4 @@
-image: python:3.9
+image: "jjanzic/docker-python3-opencv"
 
 stages:
   - build
@@ -8,6 +8,6 @@ stages:
 build_project:
   stage: build
   script:
-    - pip install --upgrade pip
-    - pip install -r requirements.txt
+#    - pip install --upgrade pip
+#    - pip install -r requirements.txt
     - echo "Installed everything!"
