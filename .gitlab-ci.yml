@@ -24,4 +24,4 @@ run_main:
     - echo "Running main (with default - hardcoded settings)!"
     - python main.py
   dependencies:
-    - build
+    - build_project
