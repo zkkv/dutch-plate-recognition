@@ -8,6 +8,20 @@ stages:
 build_project:
   stage: build
   script:
+    - python -m venv venv
+    - source venv/bin/activate
 #    - pip install --upgrade pip
 #    - pip install -r requirements.txt
     - echo "Installed everything!"
+  artifacts:
+    paths:
+      - venv/
+
+run_main:
+  stage: run
+  script:
+    - source venv/bin/activate
+    - echo "Running main (with default - hardcoded settings)!"
+    - python main.py
+  dependencies:
+    - build
