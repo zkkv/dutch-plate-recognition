@@ -1,13 +1,16 @@
 import pandas as pd
 import argparse
 import numpy as np
-# ground turth header: 'License plate', 'Timestamp', 'First frame', 'Last frame', 'Category'
+
+
 def get_args():
+	# ground truth header: 'License plate', 'Timestamp', 'First frame', 'Last frame', 'Category'
 	parser = argparse.ArgumentParser()
 	parser.add_argument('--file_path', type=str, default=None)
 	parser.add_argument('--ground_truth_path', type=str, default=None)
 	args = parser.parse_args()
 	return args
+
 
 if __name__ == '__main__':
 	args = get_args()
@@ -19,7 +22,6 @@ if __name__ == '__main__':
 	# lastFrames = ground_truth['Last frame'].tolist()
 	result = np.zeros((totalPlates, 4))
 	# 0: TP, 1: FP, 2: LTP
-
 
 	# Find the last frame and number of plates for each category
 	numCategories = len(ground_truth['Category'].unique())
