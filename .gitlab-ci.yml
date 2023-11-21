@@ -11,7 +11,6 @@ build_project:
     - python -m venv venv
     - source venv/bin/activate
     - apt-get update && apt-get install libgl1 -y   # For opencv
-    - pip install opencv-python
     - pip install --upgrade pip
     - pip install -r requirements.txt
     - echo "Installed everything!"
@@ -24,7 +23,10 @@ run_main:
   script:
     - source venv/bin/activate
     - apt-get update && apt-get install libgl1 -y
-    - echo "Running main (with default - hardcoded settings)!"
-    - python main.py
+    - echo "Running main!"
+    - python3 main.py --file_path ./dataset/pipeline/shorterVideo.avi --output_path ./Output.csv
   dependencies:
     - build_project
+  artifacts:
+    paths:
+      - Output.csv
