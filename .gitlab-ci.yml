@@ -12,8 +12,8 @@ build_project:
     - source venv/bin/activate
     - apt-get update && apt-get install libgl1 -y   # For opencv
     - pip install opencv-python
-#    - pip install --upgrade pip         # If you want to add more requirements, uncomment these 2 lines
-#    - pip install -r requirements.txt   # If you want to add more requirements, uncomment these 2 lines
+    - pip install --upgrade pip
+    - pip install -r requirements.txt
     - echo "Installed everything!"
   artifacts:
     paths:
