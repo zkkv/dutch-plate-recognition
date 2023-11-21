@@ -1,4 +1,4 @@
-image: "jjanzic/docker-python3-opencv"
+image: "hdgigante/python-opencv:4.8.1-alpine"
 
 stages:
   - build
@@ -10,7 +10,8 @@ build_project:
   script:
     - python -m venv venv
     - source venv/bin/activate
-    - apt-get update && apt-get install libgl1 -y # For opencv
+    - apt-get update && apt-get install libgl1 -y   # For opencv
+#    - pip install opencv-python
 #    - pip install --upgrade pip         # If you want to add more requirements, uncomment these 2 lines
 #    - pip install -r requirements.txt   # If you want to add more requirements, uncomment these 2 lines
     - echo "Installed everything!"
