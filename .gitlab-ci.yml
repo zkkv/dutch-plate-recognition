@@ -14,7 +14,6 @@ build_project:
     - pip install --upgrade pip         # If you want to add more requirements, uncomment these 2 lines
     - pip install -r requirements.txt   # If you want to add more requirements, uncomment these 2 lines
     - echo "Installed everything!"
-    - python main.py
   artifacts:
     paths:
       - venv/
@@ -23,6 +22,7 @@ run_main:
   stage: run
   script:
     - source venv/bin/activate
+    - apt-get update && apt-get install libgl1 -y
     - echo "Running main (with default - hardcoded settings)!"
     - python main.py
   dependencies:
