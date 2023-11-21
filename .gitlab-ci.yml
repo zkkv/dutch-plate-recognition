@@ -10,8 +10,7 @@ build_project:
   script:
     - python -m venv venv
     - source venv/bin/activate
-    - apk --no-cache add libgl1 libstdc++ -y    # For opencv
-    #- apt-get update && apt-get install libgl1 -y   # For opencv
+    - apt-get update && apt-get install libgl1 -y   # For opencv
     - pip install opencv-python
 #    - pip install --upgrade pip         # If you want to add more requirements, uncomment these 2 lines
 #    - pip install -r requirements.txt   # If you want to add more requirements, uncomment these 2 lines
@@ -24,7 +23,7 @@ run_main:
   stage: run
   script:
     - source venv/bin/activate
-#    - apt-get update && apt-get install libgl1 -y
+    - apt-get update && apt-get install libgl1 -y
     - echo "Running main (with default - hardcoded settings)!"
     - python main.py
   dependencies:
