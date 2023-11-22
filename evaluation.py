@@ -6,8 +6,8 @@ import numpy as np
 def get_args():
 	# ground truth header: 'License plate', 'Timestamp', 'First frame', 'Last frame', 'Category'
 	parser = argparse.ArgumentParser()
-	parser.add_argument('--file_path', type=str, default=None)
-	parser.add_argument('--ground_truth_path', type=str, default=None)
+	parser.add_argument('--file_path', type=str, default='dataset/Output.csv')
+	parser.add_argument('--ground_truth_path', type=str, default='dataset/groundTruth.csv')
 	args = parser.parse_args()
 	return args
 

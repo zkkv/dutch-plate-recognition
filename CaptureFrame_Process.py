@@ -30,6 +30,10 @@ def CaptureFrame_Process(file_path, sample_frequency, save_path):
 
     output = open(save_path, "w")
     output.write("License plate,Frame no.,Timestamp(seconds)\n")
-    output.write("YOUR,STUFF,HERE\n")   # TODO: Write the actual values in `output`
+
+    # TODO: REMOVE THESE (below) and write the actual values in `output`
+    output.write("XS-NB-23,34,1.822\n")
+    # output.write("YOUR,STUFF,HERE\n")
+    # TODO: REMOVE THESE (above) and write the actual values in `output`
 
     pass
