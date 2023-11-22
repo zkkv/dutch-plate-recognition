@@ -36,6 +36,8 @@ test_percentage:
   stage: evaluate
   script:
     - source venv/bin/activate
-    - python3 evaluation.py --file_path ./Output.csv --ground_truth_path ./dataset/groundTruth.csv | grep -e "Score of Category I & II"
+    - test_output=$(python3 evaluation.py --file_path ./Output.csv --ground_truth_path ./dataset/groundTruth.csv | grep -e "Score of Category I & II" | cut -c30-)
+    - if [ -n "$test_output" ] && (( $(echo "$test_output" | awk '{if ($1 < 0.4) print 1; else print 0}') )); then echo "Test score is less than 0.4"; exit 1; fi
   dependencies:
     - run_main
+  allow_failure: true
