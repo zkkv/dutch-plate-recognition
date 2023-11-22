@@ -24,7 +24,8 @@ run_main:
     - source venv/bin/activate
     - apt-get update && apt-get install libgl1 -y
     - echo "Running main!"
-    - python3 main.py --file_path ./dataset/pipeline/shorterVideo.avi --output_path ./Output.csv
+    - input_file="./dataset/pipeline/shorterVideo.avi"
+    - python3 main.py --file_path $input_file --output_path ./Output.csv
   dependencies:
     - build_project
   artifacts:
