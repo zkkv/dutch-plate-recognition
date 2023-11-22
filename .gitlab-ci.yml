@@ -29,6 +29,7 @@ run_main:
     - build_project
   artifacts:
     paths:
+      - venv/
       - Output.csv
 
 test_percentage:
