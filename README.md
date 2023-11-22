@@ -24,7 +24,9 @@ Rest of the project:
 - ``Recognize.py`` for figuring out what characters are in a plate
 - ``helpers/`` additional methods to help you get started (you do not have to use them, and are there for inspiration)
 - ``requirements.txt`` if you want to use additional Python packages make sure to add them here as well
+- ``.gitlab-ci.yml`` Gitlab pipeline file
 
-
-
+Pipeline:  
+If you want to see your score you can change the file in ``.gitlab-ci.yml`` to run on the ``trainingvideo.avi``. 
+We do not recommend always having this uncommented because running it on the full video makes the pipeline significantly slower.
 

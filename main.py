@@ -17,7 +17,6 @@ def get_args():
 
 # In this file, you need to pass three arguments into CaptureFrame_Process function.
 if __name__ == '__main__':
-	print("Hello from main!")
 	args = get_args()
 	if args.output_path is None:
 		output_path = os.getcwd()
