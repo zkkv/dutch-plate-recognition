@@ -3,7 +3,7 @@ import numpy as np
 
 # Create a VideoCapture object and read from input file
 # If the input is the camera, pass 0 instead of the video file name
-cap = cv2.VideoCapture('dataset/trainingsvideo.avi')
+cap = cv2.VideoCapture('../dataset/trainingvideo.avi')
 
 # Check if camera opened successfully
 if (cap.isOpened()== False): 
@@ -16,7 +16,7 @@ while(cap.isOpened()):
   if ret == True:
 
     # Display the resulting frame
-    cv2.imshow('Frame',frame)
+    cv2.imshow('Frame', frame)
 
     # Press Q on keyboard to  exit
     if cv2.waitKey(25) & 0xFF == ord('q'):

@@ -5,8 +5,8 @@ from moviepy.video.compositing.concatenate import concatenate_videoclips
 ### If you want to run this file you might have to add `moviepy` to your requirements.txt file
 ### Or you can just do `pip install moviepy`
 
-input_video_path = "dataset/trainingsvideo.avi"
-output_video_path = "dataset/my_output_video.avi"
+input_video_path = "../dataset/trainingvideo.avi"
+output_video_path = "../dataset/my_output_video.avi"
 
 video_clip = VideoFileClip(input_video_path)
 
