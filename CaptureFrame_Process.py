@@ -6,6 +6,12 @@ import Recognize
 import numpy as np
 from helpers.display import display_complete_video
 from helpers.display import display_single_frame
+from helpers.display import display_image
+from helpers.display import display_hsi_histograms_and_images
+from helpers.display import display_multiple_images_with_masks
+from helpers.display import display_image_with_mask
+from helpers.display import display_histogram
+from helpers.display import display_multiple_hsi_histograms_and_images
 from helpers.create_frame_array import create_frame_array
 from helpers.generate_csv_from_array import generate_csv_from_array
 
@@ -31,10 +37,38 @@ def CaptureFrame_Process(file_path, sample_frequency, save_path):
 
     # display_complete_video(frames)
     # display_single_frame(frames, 0)
-    frame = frames[0]
+    frame1000 = frames[1000]
+    frame0 = frames[0]
+    frame500 = frames[500]
+    frame2000 = frames[2000]
 
     # TODO: Implement actual algorithms for Localizing Plates
-    Localization.plate_detection(frame)
+    # isolated_plates = np.empty(frames.shape, dtype=np.uint8)
+    # for i in range(len(frames)):
+    #     isolated_plates[i] = Localization.plate_detection(frames[i])
+
+    # isolated_plate = Localization.plate_detection(frame0)
+    hsi_frame1000 = cv2.cvtColor(frame1000, cv2.COLOR_BGR2HSV)
+    hsi_frame0 = cv2.cvtColor(frame0, cv2.COLOR_BGR2HSV)
+    hsi_frame500 = cv2.cvtColor(frame500, cv2.COLOR_BGR2HSV)
+    hsi_frame2000 = cv2.cvtColor(frame2000, cv2.COLOR_BGR2HSV)
+
+    # frame1000 = Localization.plate_detection(frame1000)
+    # frame0 = Localization.plate_detection(frame0)
+    # frame500 = Localization.plate_detection(frame500)
+    # frame2000 = Localization.plate_detection(frame2000)
+
+    # display_image(frame1000)
+    # display_histogram(frame)
+    # test_histograms(frames, 5)
+    # display_hsi_histograms_and_images(frame)
+    # display_hsi_histograms_and_images(frame0)
+    display_multiple_hsi_histograms_and_images([hsi_frame0, hsi_frame500, hsi_frame1000, hsi_frame2000])
+    display_multiple_images_with_masks([frame0, frame500, frame1000, frame2000])
+    # display_image_with_mask(frame1000)
+
+    # display_image(isolated_plate)
+    # display_complete_video(isolated_plates)
 
     # TODO: Implement actual algorithms for Recognizing Characters
 
