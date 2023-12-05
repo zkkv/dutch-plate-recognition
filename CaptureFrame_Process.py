@@ -43,9 +43,9 @@ def CaptureFrame_Process(file_path, sample_frequency, save_path):
     frame2000 = frames[2000]
 
     # TODO: Implement actual algorithms for Localizing Plates
-    # isolated_plates = np.empty(frames.shape, dtype=np.uint8)
-    # for i in range(len(frames)):
-    #     isolated_plates[i] = Localization.plate_detection(frames[i])
+    isolated_plates = []
+    for i in range(len(frames)):
+        isolated_plates.append(Localization.plate_detection(frames[i]))
 
     # isolated_plate = Localization.plate_detection(frame0)
     hsi_frame1000 = cv2.cvtColor(frame1000, cv2.COLOR_BGR2HSV)
@@ -63,12 +63,12 @@ def CaptureFrame_Process(file_path, sample_frequency, save_path):
     # test_histograms(frames, 5)
     # display_hsi_histograms_and_images(frame)
     # display_hsi_histograms_and_images(frame0)
-    display_multiple_hsi_histograms_and_images([hsi_frame0, hsi_frame500, hsi_frame1000, hsi_frame2000])
-    display_multiple_images_with_masks([frame0, frame500, frame1000, frame2000])
+    # display_multiple_hsi_histograms_and_images([hsi_frame0, hsi_frame500, hsi_frame1000, hsi_frame2000])
+    # display_multiple_images_with_masks([frame0, frame500, frame1000, frame2000])
     # display_image_with_mask(frame1000)
 
     # display_image(isolated_plate)
-    # display_complete_video(isolated_plates)
+    display_complete_video(isolated_plates)
 
     # TODO: Implement actual algorithms for Recognizing Characters
 

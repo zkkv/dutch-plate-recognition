@@ -1,5 +1,16 @@
 import cv2
 import numpy as np
+import matplotlib.patches as patches
+import matplotlib.pyplot as plt
+
+
+def visualise(im, x_min, y_min, x_max, y_max):
+    fig, ax = plt.subplots()
+    ax.imshow(im)
+    rect = patches.Rectangle((y_min, x_min), y_max - y_min, x_max - x_min, 
+                             linewidth=1, edgecolor='r', facecolor='none')
+    ax.add_patch(rect)
+    plt.show()
 
 
 def generate_mask(image):
@@ -77,10 +88,20 @@ def plate_detection(image):
     # TODO: Consider adding histogram equalization
     # TODO: Return array of images for images with several plates
 
-    mask = generate_mask(image)
-    #image_mask_applied = mask_colors_by_color(image)
-    #image_morphed = apply_morphology(image_mask_applied)
+    # mask = generate_mask(image)
+    image_mask_applied = mask_colors_by_color(image)
+    image_morphed = apply_morphology(image_mask_applied)
+    x, y = np.where(image_morphed > 0)
+    
+    std_c = 1.5
+    x_filtered = x[np.where(x >= x.mean() - std_c * np.std(x))]
+    x_filtered = x_filtered[np.where(x_filtered <= x.mean() + std_c * np.std(x))]
+    
+    y_filtered = y[np.where(y >= y.mean() - std_c * np.std(y))]
+    y_filtered = y_filtered[np.where(y_filtered <= y.mean() + std_c * np.std(y))]
+    
+    x_min, x_max = min(x_filtered), max(x_filtered)
+    y_min, y_max = min(y_filtered), max(y_filtered)
 
-    # plate_images = [image, image, image]
-    return mask
+    return image[x_min:x_max, y_min:y_max]
 
