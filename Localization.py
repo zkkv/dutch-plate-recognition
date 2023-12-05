@@ -20,6 +20,25 @@ def generate_mask(image):
     return filtered_mask
 
 
+def crop_image_based_on_mask(image, mask):
+    x, y = np.where(mask > 0)
+
+    if len(x) == 0:
+        return None
+
+    std_c = 1.5
+    x_filtered = x[np.where(x >= x.mean() - std_c * np.std(x))]
+    x_filtered = x_filtered[np.where(x_filtered <= x.mean() + std_c * np.std(x))]
+
+    y_filtered = y[np.where(y >= y.mean() - std_c * np.std(y))]
+    y_filtered = y_filtered[np.where(y_filtered <= y.mean() + std_c * np.std(y))]
+
+    x_min, x_max = min(x_filtered), max(x_filtered)
+    y_min, y_max = min(y_filtered), max(y_filtered)
+
+    return image[x_min:x_max, y_min:y_max]
+
+
 def mask_colors_by_color(image_bgr):
     image_hsi = cv2.cvtColor(image_bgr, cv2.COLOR_BGR2HSV)
     # image_saturation = image_hsi[:, :, 1]
@@ -46,9 +65,6 @@ def mask_colors_by_color(image_bgr):
 
     # Segment only the selected color from the image and leave out all the rest (apply a mask)
     image_mask = cv2.inRange(image_hsi, color_min, color_max)
-    image_hsi_filtered = np.copy(image_hsi)
-    image_hsi_filtered[image_mask == 0] = 0
-    image_filtered = cv2.cvtColor(image_hsi_filtered, cv2.COLOR_HSV2BGR)
 
     # image_filtered = image_hsi[indices]
     # for i in range(image_hsi.shape[0]):
@@ -88,23 +104,8 @@ def plate_detection(image):
     # TODO: Consider adding histogram equalization
     # TODO: Return array of images for images with several plates
 
-    # mask = generate_mask(image)
-    image_mask_applied = mask_colors_by_color(image)
-    image_morphed = apply_morphology(image_mask_applied)
-    x, y = np.where(image_morphed > 0)
+    mask = generate_mask(image)
+    cropped_image = crop_image_based_on_mask(image, mask)
+    return cropped_image
 
-    if len(x) == 0:
-        return None
-    
-    std_c = 1.5
-    x_filtered = x[np.where(x >= x.mean() - std_c * np.std(x))]
-    x_filtered = x_filtered[np.where(x_filtered <= x.mean() + std_c * np.std(x))]
-    
-    y_filtered = y[np.where(y >= y.mean() - std_c * np.std(y))]
-    y_filtered = y_filtered[np.where(y_filtered <= y.mean() + std_c * np.std(y))]
-
-    x_min, x_max = min(x_filtered), max(x_filtered)
-    y_min, y_max = min(y_filtered), max(y_filtered)
-
-    return image[x_min:x_max, y_min:y_max]
 

@@ -49,7 +49,6 @@ def CaptureFrame_Process(file_path, sample_frequency, save_path):
         if cropped is not None:
             isolated_plates.append(cropped)
 
-    #isolated_plate = Localization.plate_detection(frame0)
     display_complete_video(isolated_plates)
 
     # TODO: Implement actual algorithms for Recognizing Characters
