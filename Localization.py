@@ -1,3 +1,7 @@
+import os
+import json
+import shutil
+
 import cv2
 import numpy as np
 import matplotlib.patches as patches
@@ -20,7 +24,77 @@ def generate_mask(image):
     return filtered_mask
 
 
-def crop_image_based_on_mask(image, mask):
+def iou(bbox1, bbox2):
+    x_min_1, y_min_1, x_max_1, y_max_1 = bbox1
+    x_min_2, y_min_2, x_max_2, y_max_2 = bbox2
+
+    x_min = max(x_min_1, x_min_2)
+    y_min = max(y_min_1, y_min_2)
+    x_max = min(x_max_1, x_max_2)
+    y_max = min(y_max_1, y_max_2)
+
+    intersection = (x_max - x_min + 1) * (y_max - y_min + 1)
+    a = (x_max_1 - x_min_1 + 1) * (y_max_1 - y_min_1 + 1)
+    b = (x_max_2 - x_min_2 + 1) * (y_max_2 - y_min_2 + 1)
+
+    return intersection / (a + b - intersection)
+
+
+def evaluate(frames_path, plot_gt: bool = True):
+    images_path = os.path.join(frames_path, 'images')
+    save_path = os.path.join(frames_path, 'test')
+
+    if plot_gt:
+        with open(os.path.join(frames_path, 'instances_default.json')) as fp:
+            anns = json.load(fp)
+            file2id, id2anns = {}, {}
+            for im in anns['images']:
+                file2id[im['file_name']] = im['id']
+            for ann in anns['annotations']:
+                if ann['image_id'] in id2anns.keys():
+                    id2anns[ann['image_id']].append(ann['bbox'])
+                else:
+                    id2anns[ann['image_id']] = [ann['bbox']]
+
+    if os.path.exists(save_path):
+        shutil.rmtree(save_path)
+
+    os.mkdir(save_path)
+
+    total_iou = 0
+    counter = 0
+
+    for file in os.listdir(images_path):
+        file_path = os.path.join(images_path, file)
+        image = cv2.imread(file_path)
+        bbox = plate_detection(image, True)
+
+        if bbox is not None:
+            x_min, y_min, x_max, y_max = bbox
+            fig, ax = plt.subplots()
+            ax.imshow(image)
+            rect = patches.Rectangle((y_min, x_min), y_max - y_min, x_max - x_min,
+                                     linewidth=1, edgecolor='r', facecolor='none')
+            ax.add_patch(rect)
+            if plot_gt:
+                img_id = file2id[file]
+                if img_id in id2anns.keys(): 
+                    bbox_gt = id2anns[img_id]
+                    for b in bbox_gt:
+                        x_min, y_min, w, h = b
+                        score = iou(bbox, [y_min, x_min, y_min + h, x_min + w])
+                        total_iou += score
+                        counter += 1
+                        rect_gt = patches.Rectangle((x_min, y_min), w, h,
+                                                    linewidth=1, edgecolor='g', facecolor='none')
+                        ax.add_patch(rect_gt)
+                        ax.text(y_min - 10, x_min - 10, round(score, 2))
+            fig.savefig(os.path.join(save_path, file))
+
+    print('Average IOU:', total_iou / counter)
+
+
+def crop_image_based_on_mask(image, mask, return_bbox: bool = False):
     x, y = np.where(mask > 0)
 
     if len(x) == 0:
@@ -36,41 +110,20 @@ def crop_image_based_on_mask(image, mask):
     x_min, x_max = min(x_filtered), max(x_filtered)
     y_min, y_max = min(y_filtered), max(y_filtered)
 
+    if return_bbox:
+        return x_min, y_min, x_max, y_max
+
     return image[x_min:x_max, y_min:y_max]
 
 
 def mask_colors_by_color(image_bgr):
     image_hsi = cv2.cvtColor(image_bgr, cv2.COLOR_BGR2HSV)
-    # image_saturation = image_hsi[:, :, 1]
-
-    # fig, ax = plt.subplots(3, 1)
-    # ax[0].imshow(img_rgb)
-    # edges = sobel_filter(hue)
-    # ax[1].imshow(hue)
-    # ax[2].imshow(edges)
-    # fig.savefig('test2.png')
-
-    # For isolating color
-    # color_min = np.array([10, 50, 145])
-    # color_max = np.array([25, 255, 255])
 
     color_min = np.array([10, 70, 50])
     color_max = np.array([35, 255, 200])
 
-    # color_min = np.array([8, 70, 30])
-    # color_max = np.array([35, 200, 200])
-
-    # color_min = np.array([0, 50, 0])
-    # color_max = np.array([35, 255, 255])
-
     # Segment only the selected color from the image and leave out all the rest (apply a mask)
     image_mask = cv2.inRange(image_hsi, color_min, color_max)
-
-    # image_filtered = image_hsi[indices]
-    # for i in range(image_hsi.shape[0]):
-    #     for j in range(image_hsi.shape[1]):
-    #         if image_mask[i, j] == 0:
-    #             image_filtered[i, j] = [0, 0, 0]
     return image_mask
 
 
@@ -85,7 +138,7 @@ def apply_median_filter(image):
     return cv2.medianBlur(image, 9)
 
 
-def plate_detection(image):
+def plate_detection(image, return_bbox: bool = False):
     """
     In this file, you need to define plate_detection function.
     To do:
@@ -105,7 +158,12 @@ def plate_detection(image):
     # TODO: Return array of images for images with several plates
 
     mask = generate_mask(image)
-    cropped_image = crop_image_based_on_mask(image, mask)
+    cropped_image = crop_image_based_on_mask(image, mask, return_bbox)
     return cropped_image
+
+
+if __name__ == '__main__':
+    frames_path = 'dataset/sampled'
+    evaluate(frames_path)
 
 

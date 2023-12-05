@@ -33,14 +33,7 @@ def CaptureFrame_Process(file_path, sample_frequency, save_path):
     """
 
     # TODO: Read frames from the video (saved at `file_path`) by making use of `sample_frequency`
-    frames = create_frame_array(file_path)
-
-    # display_complete_video(frames)
-    # display_single_frame(frames, 0)
-    frame1000 = frames[1000]
-    frame0 = frames[0]
-    frame500 = frames[500]
-    frame2000 = frames[2000]
+    frames = create_frame_array(file_path, 24)
 
     # TODO: Implement actual algorithms for Localizing Plates
     isolated_plates = []
