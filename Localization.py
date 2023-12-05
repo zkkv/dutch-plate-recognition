@@ -92,6 +92,9 @@ def plate_detection(image):
     image_mask_applied = mask_colors_by_color(image)
     image_morphed = apply_morphology(image_mask_applied)
     x, y = np.where(image_morphed > 0)
+
+    if len(x) == 0:
+        return None
     
     std_c = 1.5
     x_filtered = x[np.where(x >= x.mean() - std_c * np.std(x))]
@@ -99,7 +102,7 @@ def plate_detection(image):
     
     y_filtered = y[np.where(y >= y.mean() - std_c * np.std(y))]
     y_filtered = y_filtered[np.where(y_filtered <= y.mean() + std_c * np.std(y))]
-    
+
     x_min, x_max = min(x_filtered), max(x_filtered)
     y_min, y_max = min(y_filtered), max(y_filtered)
 
