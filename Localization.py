@@ -33,9 +33,9 @@ def iou(bbox1, bbox2):
     x_max = min(x_max_1, x_max_2)
     y_max = min(y_max_1, y_max_2)
 
-    intersection = (x_max - x_min + 1) * (y_max - y_min + 1)
-    a = (x_max_1 - x_min_1 + 1) * (y_max_1 - y_min_1 + 1)
-    b = (x_max_2 - x_min_2 + 1) * (y_max_2 - y_min_2 + 1)
+    intersection = (x_max - x_min) * (y_max - y_min)
+    a = (x_max_1 - x_min_1) * (y_max_1 - y_min_1)
+    b = (x_max_2 - x_min_2) * (y_max_2 - y_min_2)
 
     return intersection / (a + b - intersection)
 
@@ -72,7 +72,7 @@ def evaluate(frames_path, plot_gt: bool = True):
         if bbox is not None:
             x_min, y_min, x_max, y_max = bbox
             fig, ax = plt.subplots()
-            ax.imshow(image)
+            ax.imshow(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
             rect = patches.Rectangle((y_min, x_min), y_max - y_min, x_max - x_min,
                                      linewidth=1, edgecolor='r', facecolor='none')
             ax.add_patch(rect)
@@ -88,8 +88,10 @@ def evaluate(frames_path, plot_gt: bool = True):
                         rect_gt = patches.Rectangle((x_min, y_min), w, h,
                                                     linewidth=1, edgecolor='g', facecolor='none')
                         ax.add_patch(rect_gt)
-                        ax.text(y_min - 10, x_min - 10, round(score, 2))
+                        # ax.text(y_min - 10, x_min - 10, round(score, 2))
+                        plt.title(round(score, 2))
             fig.savefig(os.path.join(save_path, file))
+            plt.close()
 
     print('Average IOU:', total_iou / counter)
 
@@ -100,7 +102,7 @@ def crop_image_based_on_mask(image, mask, return_bbox: bool = False):
     if len(x) == 0:
         return None
 
-    std_c = 1.5
+    std_c = 1.7
     x_filtered = x[np.where(x >= x.mean() - std_c * np.std(x))]
     x_filtered = x_filtered[np.where(x_filtered <= x.mean() + std_c * np.std(x))]
 
