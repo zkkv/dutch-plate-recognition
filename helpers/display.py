@@ -9,7 +9,8 @@ def display_complete_video(frames):
     print("Press Q to quit")
 
     for frame in frames:
-        cv2.imshow('Frame', frame)
+        if frame.shape[0] > 0 and frame.shape[1] > 0:
+            cv2.imshow('Frame', frame)
 
         if cv2.waitKey(25) & 0xFF == ord('q'):
             break
