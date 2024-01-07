@@ -3,6 +3,7 @@ import json
 import shutil
 
 import cv2
+import cv2.gapi
 import numpy as np
 import matplotlib.patches as patches
 import matplotlib.pyplot as plt
@@ -140,6 +141,21 @@ def apply_median_filter(image):
     return cv2.medianBlur(image, 9)
 
 
+def preprocess(image):
+    image_gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    image_median_filter = cv2.medianBlur(image_gray, 3)
+    image_equalized = cv2.equalizeHist(image_median_filter)
+    return image_equalized
+
+
+def detect_edges(image):
+    image_sobel = cv2.Sobel(image, ddepth=-1, dx=1, dy=0, ksize=3)
+    mean_gradient = int(np.round(np.mean(image_sobel)))
+    threshold = mean_gradient * 12  # found by trial-and-error
+    retval, binary_image = cv2.threshold(image_sobel, threshold, 255, cv2.THRESH_BINARY_INV)
+    return binary_image
+
+
 def plate_detection(image, return_bbox: bool = False):
     """
     In this file, you need to define plate_detection function.
@@ -159,9 +175,13 @@ def plate_detection(image, return_bbox: bool = False):
     # TODO: Consider adding histogram equalization
     # TODO: Return array of images for images with several plates
 
-    mask = generate_mask(image)
-    cropped_image = crop_image_based_on_mask(image, mask, return_bbox)
-    return cropped_image
+    image_processed = preprocess(image)
+    image_edges = detect_edges(image_processed)
+
+    # Old color-based method
+    # mask = generate_mask(image_processed)
+    # cropped_image = crop_image_based_on_mask(image_processed, mask, return_bbox)
+    return image_edges
 
 
 if __name__ == '__main__':
