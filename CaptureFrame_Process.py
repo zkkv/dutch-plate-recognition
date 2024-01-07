@@ -36,6 +36,10 @@ def CaptureFrame_Process(file_path, sample_frequency, save_path):
     frames = create_frame_array(file_path, 1)
 
     # TODO: Implement actual algorithms for Localizing Plates
+    #
+    # isolated_single = Localization.plate_detection(frames[10])
+    # display_image(isolated_single)
+
     isolated_plates = []
     for i in range(len(frames)):
         cropped = Localization.plate_detection(frames[i])

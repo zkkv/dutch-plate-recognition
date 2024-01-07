@@ -177,11 +177,30 @@ def plate_detection(image, return_bbox: bool = False):
 
     image_processed = preprocess(image)
     image_edges = detect_edges(image_processed)
+    # image_edges = cv2.Canny(image_processed, 100, 160)
+    lines = cv2.HoughLines(image_edges, 5, np.pi / 180 * 3, 400)
+    # print(lines)
+    if lines is not None:
+        print(lines.shape)
+
+    if lines is not None:
+        for i in range(0, len(lines)):
+            rho = lines[i][0][0]
+            theta = lines[i][0][1]
+            # if abs(abs(theta) - np.pi / 2) > np.pi / 180 * 5:
+            #     continue
+            a = np.cos(theta)
+            b = np.sin(theta)
+            x0 = a * rho
+            y0 = b * rho
+            pt1 = (int(x0 + 1000 * (-b)), int(y0 + 1000 * (a)))
+            pt2 = (int(x0 - 1000 * (-b)), int(y0 - 1000 * (a)))
+            cv2.line(image, pt1, pt2, (0, 0, 255), 1, cv2.LINE_AA)
 
     # Old color-based method
     # mask = generate_mask(image_processed)
     # cropped_image = crop_image_based_on_mask(image_processed, mask, return_bbox)
-    return image_edges
+    return image
 
 
 if __name__ == '__main__':
