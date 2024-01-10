@@ -118,11 +118,14 @@ def crop_image_based_on_mask(image, mask, return_bbox: bool = False):
     return image[x_min:x_max, y_min:y_max]
 
 
-def mask_colors_by_color(image_bgr):
+def mask_colors_by_color(image_bgr, center=22, compute_center=False):
     image_hsi = cv2.cvtColor(image_bgr, cv2.COLOR_BGR2HSV)
+    if compute_center:
+        vals, counts = np.unique(image_hsi[:, :, 0], return_counts=True)
+        center = vals[np.argmax(counts)]
 
-    color_min = np.array([10, 70, 50])
-    color_max = np.array([35, 255, 200])
+    color_min = np.array([max(center - 13, 0), 70, 50])
+    color_max = np.array([center + 13, 255, 200])
 
     # Segment only the selected color from the image and leave out all the rest (apply a mask)
     image_mask = cv2.inRange(image_hsi, color_min, color_max)
