@@ -63,9 +63,7 @@ def detect_lines(image, r_max, theta_max):
 
     for i, k in enumerate(groups.keys()):
         g = groups[k]
-        print(g)
         if len(g) >= 1:
-            print(groups[k], colors[i])
             fig, ax = plt.subplots()
             ax.imshow(image)
             for v in g:
@@ -104,6 +102,23 @@ def detect_lines(image, r_max, theta_max):
     cv2.waitKey()
 
 
+def get_pairs(lines):
+    pairs = []
+    for i in range(len(lines)):
+        for j in range(i, len(lines)):
+            x11, y11, x12, y12 = lines[i][0]
+            x21, y21, x22, y22 = lines[j][0]
+            k1 = (y12 - y11) / (x12 - x11)
+            k2 = (y22 - y21) / (x22 - x21)
+            b1 = y11 - k1 * x11
+            b2 = y22 - k2 * x22
+            # print(abs((x12 - x11)**2 + (y12 - y11)**2 - (x22 - x21)**2 - (y22 - y21)**2))
+
+            if abs(b2 - b1) >= 30:
+                pairs.append((lines[i], lines[j]))
+    return pairs
+
+
 def test(img):
     # Read image
     # Convert the image to gray-scale
@@ -111,36 +126,53 @@ def test(img):
     # Find the edges in the image using canny detector
     edges = cv2.Canny(gray, 50, 200)
     # Detect points that form a line
-    lines = cv2.HoughLinesP(edges, rho=1,theta=np.pi/360, threshold=80, minLineLength=100, maxLineGap=100)
+    lines = cv2.HoughLinesP(edges, rho=1, theta=np.pi/360, threshold=100, minLineLength=100, maxLineGap=100)
+    print(lines)
     # Draw lines on the image
     groups = {}
     for line in lines:
         x1, y1, x2, y2 = line[0]
-        theta = round((y2 - y1) / (x2 - x1), 1)
+        theta = round((y2 - y1) / (x2 - x1), 2)
         if theta in groups.keys():
             groups[theta].append(line)
         else:
             groups[theta] = [line]
 
     # Show result
-    print(groups)
+    pairs = []
     for k, v in groups.items():
-        if len(v) < 2:
-            continue
+        pairs.extend(get_pairs(v))
+
+    for x, y in pairs:
         color = (np.random.randint(255), np.random.randint(255), np.random.randint(255))
-        for line in v:
-            x1, y1, x2, y2 = line[0]
-            cv2.line(img, (x1, y1), (x2, y2), color, 3)
+        x11, y11, x12, y12 = x[0]
+        x21, y21, x22, y22 = y[0]
+        plt.imshow(img)
+        plt.plot([x11, x12], [y11, y12], linewidth=3)
+        plt.plot([x21, x22], [y21, y22], linewidth=3)
+        # cv2.line(img, (x11, y11), (x12, y12), color, 3)
+        # cv2.line(img, (x21, y21), (x22, y22), color, 3)
+        # cv2.imshow("Result Image", img)
+        # cv2.waitKey()
+        plt.show()
+
+    # for k, v in groups.items():
+    #     if len(v) < 2:
+    #         continue
+    #     color = (np.random.randint(255), np.random.randint(255), np.random.randint(255))
+    #     for line in v:
+    #         x1, y1, x2, y2 = line[0]
+    #         cv2.line(img, (x1, y1), (x2, y2), color, 3)
     cv2.imshow("Result Image", img)
     cv2.waitKey()
 
 
 if __name__ == "__main__":
-    path = "dataset/sampled/images/frame_1.png"
+    path = "dataset/sampled/images/frame_46.png"
     img = load_image(path, False)
     sobel_vertical = cv2.Sobel(img, cv2.CV_64F, 1, 0, ksize=7)
-    print(np.unique(sobel_vertical))
-    cv2.imshow("Vertical", sobel_vertical)
+    # print(np.unique(sobel_vertical))
+    # cv2.imshow("Vertical", sobel_vertical)
     # detect_lines(img, np.sqrt(img.shape[0]**2 + img.shape[1]**2), 6)
     test(img)
 

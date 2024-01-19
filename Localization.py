@@ -139,8 +139,83 @@ def apply_morphology(image):
     return result
 
 
+def cohen_sutherland(x1, y1, x2, y2, xmin, ymin, xmax, ymax):
+    INSIDE = 0  # 0000
+    LEFT = 1    # 0001
+    RIGHT = 2   # 0010
+    BOTTOM = 4  # 0100
+    TOP = 8     # 1000
+
+    def compute_code(x, y):
+        code = INSIDE
+        if x < xmin:
+            code |= LEFT
+        elif x > xmax:
+            code |= RIGHT
+        if y < ymin:
+            code |= BOTTOM
+        elif y > ymax:
+            code |= TOP
+        return code
+
+    code1 = compute_code(x1, y1)
+    code2 = compute_code(x2, y2)
+
+    while (code1 | code2) != 0:
+        if (code1 & code2) != 0:
+            # Trivially reject the line segment
+            return None
+        code = code1 if code1 != 0 else code2
+
+        if code & TOP:
+            x = x1 + (x2 - x1) * (ymax - y1) / (y2 - y1)
+            y = ymax
+        elif code & BOTTOM:
+            x = x1 + (x2 - x1) * (ymin - y1) / (y2 - y1)
+            y = ymin
+        elif code & RIGHT:
+            y = y1 + (y2 - y1) * (xmax - x1) / (x2 - x1)
+            x = xmax
+        elif code & LEFT:
+            y = y1 + (y2 - y1) * (xmin - x1) / (x2 - x1)
+            x = xmin
+
+        if code == code1:
+            x1, y1 = x, y
+            code1 = compute_code(x1, y1)
+        else:
+            x2, y2 = x, y
+            code2 = compute_code(x2, y2)
+
+    return x1, y1, x2, y2
+
+
 def apply_median_filter(image):
     return cv2.medianBlur(image, 9)
+
+
+def calculate_hough(image):
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    edges = cv2.Canny(gray, 50, 200)
+    lines = cv2.HoughLinesP(edges, rho=1, theta=np.pi / 360, threshold=100, minLineLength=100, maxLineGap=100)
+    return lines
+
+
+def filter_lines(lines, bbox):
+    y_min, x_min, y_max, x_max = bbox
+    result = []
+
+    for line in lines:
+        x1, y1, x2, y2 = line[0]
+        out = cohen_sutherland(x1, y1, x2, y2, x_min, y_min, x_max, y_max)
+
+        # if x_max > x1 > x_min and x_max > x2 > x_min:
+        #     if y_max > y1 > y_min and y_max > y2 > y_min:
+        if out is not None:
+            x1, y1, x2, y2 = out
+            result.append([x1 - x_min, y1 - y_min, x2 - x_min, y2 - y_min])
+
+    return result
 
 
 def plate_detection(image, return_bbox: bool = False):
@@ -161,14 +236,30 @@ def plate_detection(image, return_bbox: bool = False):
     """
     # TODO: Consider adding histogram equalization
     # TODO: Return array of images for images with several plates
+    lines = calculate_hough(image)
 
     mask = generate_mask(image)
-    cropped_image = crop_image_based_on_mask(image, mask, return_bbox)
+    bbox = crop_image_based_on_mask(image, mask, return_bbox)
+    x_min, y_min, x_max, y_max = bbox
+    cropped_image = image[x_min:x_max, y_min:y_max]
+    plt.imshow(cropped_image)
+    plt.show()
+
+    filtered_lines = filter_lines(lines, bbox)
+
+    plt.imshow(cropped_image)
+    for line in filtered_lines:
+        x1, y1, x2, y2 = line
+        plt.plot([x1, x2], [y1, y2], linewidth=2)
+    plt.show()
     return cropped_image
 
 
 if __name__ == '__main__':
-    frames_path = 'dataset/sampled'
-    evaluate(frames_path)
+    frame_path = 'dataset/sampled/images/frame_1.png'
+    image = cv2.imread(frame_path)
+    plate_detection(image, True)
+    # evaluate(frames_path)
+
 
 
