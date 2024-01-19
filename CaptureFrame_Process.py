@@ -37,7 +37,7 @@ def CaptureFrame_Process(file_path, sample_frequency, save_path):
 
     # TODO: Implement actual algorithms for Localizing Plates
 
-    isolated_single = Localization.plate_detection(frames[10])
+    isolated_single = Localization.plate_detection(frames[1200])
     display_image(isolated_single)
 
     # isolated_plates = []
