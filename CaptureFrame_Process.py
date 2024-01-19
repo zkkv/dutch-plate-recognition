@@ -36,17 +36,17 @@ def CaptureFrame_Process(file_path, sample_frequency, save_path):
     frames = create_frame_array(file_path, 1)
 
     # TODO: Implement actual algorithms for Localizing Plates
+
+    isolated_single = Localization.plate_detection(frames[10])
+    display_image(isolated_single)
+
+    # isolated_plates = []
+    # for i in range(len(frames)):
+    #     cropped = Localization.plate_detection(frames[i])
+    #     if cropped.shape[0] > 0 and cropped.shape[1] > 0:
+    #         isolated_plates.append(cropped)
     #
-    # isolated_single = Localization.plate_detection(frames[10])
-    # display_image(isolated_single)
-
-    isolated_plates = []
-    for i in range(len(frames)):
-        cropped = Localization.plate_detection(frames[i])
-        if cropped.shape[0] > 0 and cropped.shape[1] > 0:
-            isolated_plates.append(cropped)
-
-    display_complete_video(isolated_plates)
+    # display_complete_video(isolated_plates)
 
     # TODO: Implement actual algorithms for Recognizing Characters
 

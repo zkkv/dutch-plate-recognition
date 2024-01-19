@@ -151,8 +151,9 @@ def preprocess(image):
 def detect_edges(image):
     image_sobel = cv2.Sobel(image, ddepth=-1, dx=1, dy=0, ksize=3)
     mean_gradient = int(np.round(np.mean(image_sobel)))
-    threshold = mean_gradient * 12  # found by trial-and-error
-    retval, binary_image = cv2.threshold(image_sobel, threshold, 255, cv2.THRESH_BINARY_INV)
+    threshold = 0  # found by trial-and-error
+    retval, binary_image = cv2.threshold(image_sobel, threshold, 255, cv2.THRESH_BINARY)
+    morphed = cv2.morphologyEx(binary_image, cv2.MORPH_OPEN, np.ones((3, 3)))
     return binary_image
 
 
@@ -176,25 +177,30 @@ def plate_detection(image, return_bbox: bool = False):
     # TODO: Return array of images for images with several plates
 
     image_processed = preprocess(image)
-    image_edges = detect_edges(image_processed)
-    # image_edges = cv2.Canny(image_processed, 100, 160)
-    lines = cv2.HoughLines(image_edges, 5, np.pi / 180 * 3, 400)
+    # image_edges = detect_edges(image_processed)
+    image_edges = cv2.Canny(image_processed, 30, 160)
+    # lines = cv2.HoughLines(image_edges, 3, np.pi / 180 * 1, 300)
+    lines = cv2.HoughLinesP(image_edges, 3, np.pi / 180 * 1, 1, minLineLength=80, maxLineGap=10)
     # print(lines)
-    if lines is not None:
-        print(lines.shape)
+    # if lines is not None:
+        # print(lines.shape)
 
     if lines is not None:
         for i in range(0, len(lines)):
-            rho = lines[i][0][0]
-            theta = lines[i][0][1]
-            # if abs(abs(theta) - np.pi / 2) > np.pi / 180 * 5:
+            x1, y1, x2, y2 = lines[i][0]
+            # rho = lines[i][0][0]
+            # theta = lines[i][0][1]
+            # if abs(abs(theta) - np.pi) > np.pi / 180 * 5:
             #     continue
-            a = np.cos(theta)
-            b = np.sin(theta)
-            x0 = a * rho
-            y0 = b * rho
-            pt1 = (int(x0 + 1000 * (-b)), int(y0 + 1000 * (a)))
-            pt2 = (int(x0 - 1000 * (-b)), int(y0 - 1000 * (a)))
+
+            # a = np.cos(theta)
+            # b = np.sin(theta)
+            # x0 = a * rho
+            # y0 = b * rho
+            # pt1 = (int(x0 + 1000 * (-b)), int(y0 + 1000 * (a)))
+            # pt2 = (int(x0 - 1000 * (-b)), int(y0 - 1000 * (a)))
+            pt1 = (x1, y1)
+            pt2 = (x2, y2)
             cv2.line(image, pt1, pt2, (0, 0, 255), 1, cv2.LINE_AA)
 
     # Old color-based method
