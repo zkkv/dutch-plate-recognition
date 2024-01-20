@@ -3,11 +3,10 @@ import json
 import shutil
 
 import cv2
+import cv2.gapi
 import numpy as np
 import matplotlib.patches as patches
 import matplotlib.pyplot as plt
-
-# from Recognize import create_references
 
 
 def visualise(im, x_min, y_min, x_max, y_max):
@@ -120,14 +119,11 @@ def crop_image_based_on_mask(image, mask, return_bbox: bool = False):
     return image[x_min:x_max, y_min:y_max]
 
 
-def mask_colors_by_color(image_bgr, center=22, compute_center=False):
+def mask_colors_by_color(image_bgr):
     image_hsi = cv2.cvtColor(image_bgr, cv2.COLOR_BGR2HSV)
-    if compute_center:
-        vals, counts = np.unique(image_hsi[:, :, 0], return_counts=True)
-        center = vals[np.argmax(counts)]
 
-    color_min = np.array([max(center - 13, 0), 70, 50])
-    color_max = np.array([center + 13, 255, 200])
+    color_min = np.array([10, 70, 50])
+    color_max = np.array([35, 255, 200])
 
     # Segment only the selected color from the image and leave out all the rest (apply a mask)
     image_mask = cv2.inRange(image_hsi, color_min, color_max)
@@ -141,91 +137,24 @@ def apply_morphology(image):
     return result
 
 
-def cohen_sutherland(x1, y1, x2, y2, xmin, ymin, xmax, ymax):
-    INSIDE = 0  # 0000
-    LEFT = 1    # 0001
-    RIGHT = 2   # 0010
-    BOTTOM = 4  # 0100
-    TOP = 8     # 1000
-
-    def compute_code(x, y):
-        code = INSIDE
-        if x < xmin:
-            code |= LEFT
-        elif x > xmax:
-            code |= RIGHT
-        if y < ymin:
-            code |= BOTTOM
-        elif y > ymax:
-            code |= TOP
-        return code
-
-    code1 = compute_code(x1, y1)
-    code2 = compute_code(x2, y2)
-
-    while (code1 | code2) != 0:
-        if (code1 & code2) != 0:
-            # Trivially reject the line segment
-            return None
-        code = code1 if code1 != 0 else code2
-
-        if code & TOP:
-            x = x1 + (x2 - x1) * (ymax - y1) / (y2 - y1)
-            y = ymax
-        elif code & BOTTOM:
-            x = x1 + (x2 - x1) * (ymin - y1) / (y2 - y1)
-            y = ymin
-        elif code & RIGHT:
-            y = y1 + (y2 - y1) * (xmax - x1) / (x2 - x1)
-            x = xmax
-        elif code & LEFT:
-            y = y1 + (y2 - y1) * (xmin - x1) / (x2 - x1)
-            x = xmin
-
-        if code == code1:
-            x1, y1 = x, y
-            code1 = compute_code(x1, y1)
-        else:
-            x2, y2 = x, y
-            code2 = compute_code(x2, y2)
-
-    return x1, y1, x2, y2
-
-
 def apply_median_filter(image):
     return cv2.medianBlur(image, 9)
 
 
-def calculate_hough(image):
-    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    edges = cv2.Canny(gray, 50, 200)
-    lines = cv2.HoughLinesP(edges, rho=1, theta=np.pi / 360, threshold=100, minLineLength=100, maxLineGap=100)
-    return lines
+def preprocess(image):
+    image_gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    image_median_filter = cv2.medianBlur(image_gray, 3)
+    image_equalized = cv2.equalizeHist(image_median_filter)
+    return image_equalized
 
 
-def calculate_sift(image):
-    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    sift = cv2.SIFT_create()
-    kp = sift.detect(gray, None)
-    image = cv2.drawKeypoints(gray, kp, image)
-    return image
-
-
-def filter_lines(lines, bbox):
-    y_min, x_min, y_max, x_max = bbox
-    result = []
-
-    for line in lines:
-        x1, y1, x2, y2 = line[0]
-        out = cohen_sutherland(x1, y1, x2, y2, x_min, y_min, x_max, y_max)
-
-        # if x_max > x1 > x_min and x_max > x2 > x_min:
-        #     if y_max > y1 > y_min and y_max > y2 > y_min:
-        if out is not None:
-            x1, y1, x2, y2 = out
-            result.append([x1 - x_min, y1 - y_min, x2 - x_min, y2 - y_min])
-
-    return result
+def detect_edges(image):
+    image_sobel = cv2.Sobel(image, ddepth=-1, dx=1, dy=0, ksize=3)
+    mean_gradient = int(np.round(np.mean(image_sobel)))
+    threshold = 0  # found by trial-and-error
+    retval, binary_image = cv2.threshold(image_sobel, threshold, 255, cv2.THRESH_BINARY)
+    morphed = cv2.morphologyEx(binary_image, cv2.MORPH_OPEN, np.ones((3, 3)))
+    return binary_image
 
 
 def plate_detection(image, return_bbox: bool = False):
@@ -246,61 +175,40 @@ def plate_detection(image, return_bbox: bool = False):
     """
     # TODO: Consider adding histogram equalization
     # TODO: Return array of images for images with several plates
-    sift_image = calculate_sift(image)
-    cv2.imshow('sift', sift_image)
-    cv2.waitKey()
-    lines = calculate_hough(image)
-    mask = generate_mask(image)
-    bbox = crop_image_based_on_mask(image, mask, return_bbox)
-    x_min, y_min, x_max, y_max = bbox
-    cropped_image = image[x_min:x_max, y_min:y_max]
-    # plt.imshow(cropped_image)
-    # plt.show()
 
-    filtered_lines = filter_lines(lines, bbox)
+    image_color_masked = mask_colors_by_color(image)
+    # image_gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    # retval, binary_image = cv2.threshold(image_gray, thresh=127, maxval=255, type=cv2.THRESH_BINARY)
+    canny_image = cv2.Canny(image_color_masked, 10, 160)
 
-    # plt.imshow(cropped_image)
-    for line in filtered_lines:
-        x1, y1, x2, y2 = line
-        color = (np.random.randint(255), np.random.randint(255), np.random.randint(255))
-        cv2.line(cropped_image, (x1, y1), (x2, y2), color, 3)
-        # plt.plot([x1, x2], [y1, y2], linewidth=2)
-        print(line)
-    # plt.show()
-    return cropped_image
+    lines = cv2.HoughLines(canny_image, 3, np.pi / 180 * 5, 50)
+    #lines = cv2.HoughLinesP(canny_image, 3, np.pi / 180 * 1, 1, minLineLength=80, maxLineGap=10)
 
+    if lines is not None:
+        for i in range(0, len(lines)):
+            # x1, y1, x2, y2 = lines[i][0]
+            # pt1 = (x1, y1)
+            # pt2 = (x2, y2)
+            rho = lines[i][0][0]
+            theta = lines[i][0][1]
+            # if abs(abs(theta) - np.pi) > np.pi / 180 * 5:
+            #     continue
+            a = np.cos(theta)
+            b = np.sin(theta)
+            x0 = a * rho
+            y0 = b * rho
+            pt1 = (int(x0 + 1000 * (-b)), int(y0 + 1000 * (a)))
+            pt2 = (int(x0 - 1000 * (-b)), int(y0 - 1000 * (a)))
 
-def sift_experiments(image1, image2):
-    img1 = cv2.cvtColor(image1, cv2.COLOR_BGR2GRAY)
-    img2 = cv2.cvtColor(image2, cv2.COLOR_BGR2GRAY)
-    sift = cv2.SIFT_create()
-
-    keypoints_1, descriptors_1 = sift.detectAndCompute(img1, None)
-    keypoints_2, descriptors_2 = sift.detectAndCompute(img2, None)
-
-    bf = cv2.BFMatcher(cv2.NORM_L1, crossCheck=True)
-
-    matches = bf.match(descriptors_1, descriptors_2)
-    matches = sorted(matches, key=lambda x: x.distance)
-    print([x.distance for x in matches])
-    img3 = cv2.drawMatches(image1, keypoints_1, image2, keypoints_2, matches[:5], img2, flags=2)
-    plt.imshow(img3), plt.show()
-# [2056.0, 2091.0, 2470.0, 2747.0, 3094.0]
-# [1983.0, 2058.0, 2201.0, 2237.0, 3030.0]
+            cv2.line(image, pt1, pt2, (0, 0, 255), 1, cv2.LINE_AA)
+    # Old color-based method
+    # mask = generate_mask(image_processed)
+    # cropped_image = crop_image_based_on_mask(image_processed, mask, return_bbox)
+    return image
 
 
-
-# if __name__ == '__main__':
-#     # frame_path = 'dataset/sampled/images/frame_1.png'
-#     frame_path1 = 'dataset/SameSizeNumbers/8/img_1.png'
-#     # frame_path2 = 'dataset/SameSizeNumbers/4/img_1.png'
-#     image1 = cv2.imread(frame_path1)
-#     # image2 = cv2.imread(frame_path2)
-#     # plate_detection(image, True)
-#     # evaluate(frames_path)
-#     # sift_experiments(image1, image2)
-#     data_path = "dataset"
-#     references = create_sift_references(data_path)
-#     test_sift(image1, references)
+if __name__ == '__main__':
+    frames_path = 'dataset/sampled'
+    evaluate(frames_path)
 
 
