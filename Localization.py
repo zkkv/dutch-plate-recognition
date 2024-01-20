@@ -193,9 +193,10 @@ def plate_detection(image, return_bbox: bool = False):
     # step 10% in each direction for hough to work better
     step = int(0.1 * (y + h))
     bbox_canny = canny_image[y - step:y + h + 1 + step, x - step:x + w + 1 + step]
+    bbox_canny_fat = canny_image_fat[y:y + h + 1, x:x + w + 1]
     # bbox = image[y - step:y + h + 1 + step, x - step:x + w + 1 + step]
 
-    lines = cv2.HoughLines(bbox_canny, 3, np.pi / 180 * 5, 50)
+    lines = cv2.HoughLines(bbox_canny, 3, np.pi / 180 * 2, 95)
     # lines = cv2.HoughLinesP(bbox_canny, 1, np.pi / 180 * 1, 1, minLineLength=20, maxLineGap=10)
 
     # location = None
@@ -216,12 +217,14 @@ def plate_detection(image, return_bbox: bool = False):
     # new_image = cv2.bitwise_and(image, image, mask=mask)
 
     # if lines is not None:
+    #     thetas = []
     #     for i in range(0, len(lines)):
     #         # x1, y1, x2, y2 = lines[i][0]
     #         # pt1 = (x1, y1)
     #         # pt2 = (x2, y2)
     #         rho = lines[i][0][0]
     #         theta = lines[i][0][1]
+    #         thetas.append(round(theta, 3))
     #         # if abs(abs(theta) - np.pi) > np.pi / 180 * 5:
     #         #     continue
     #         a = np.cos(theta)
@@ -232,8 +235,8 @@ def plate_detection(image, return_bbox: bool = False):
     #         pt2 = (int(x0 - 1000 * (-b)), int(y0 - 1000 * (a)))
     #
     #         cv2.line(bbox, pt1, pt2, (0, 0, 255), 1, cv2.LINE_AA)
-
-
+    #
+    #     print(np.unique(thetas), len(lines))
 
     if lines is not None:
         thetas_rad = lines[:, 0, 1]
@@ -242,8 +245,22 @@ def plate_detection(image, return_bbox: bool = False):
         # print(thetas_degrees)
         # print(median_angle)
         rotated_bbox = ndimage.rotate(bbox, median_angle - 90)
+        rotated_bbox_canny_fat = ndimage.rotate(bbox_canny_fat, median_angle - 90)
 
-        return rotated_bbox
+        # cv2.imshow('image', bbox_canny_fat)
+        # cv2.waitKey(0)
+        # cv2.imshow('image', rotated_bbox_canny_fat)
+        # cv2.waitKey(0)
+
+
+        contours, output_image = cv2.findContours(rotated_bbox_canny_fat.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        cnts = sorted(contours, key=cv2.contourArea, reverse=True)[:30]
+        cv2.drawContours(rotated_bbox, cnts, 0, (0, 255, 0), 3)
+
+        x, y, w, h = cv2.boundingRect(cnts[0])
+        bbox = rotated_bbox[y:y + h + 1, x:x + w + 1]
+
+        return bbox
 
     # Old color-based method
     # mask = generate_mask(image_processed)
