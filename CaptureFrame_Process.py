@@ -33,26 +33,27 @@ def CaptureFrame_Process(file_path, sample_frequency, save_path):
     """
 
     # TODO: Read frames from the video (saved at `file_path`) by making use of `sample_frequency`
-    frames = create_frame_array(file_path, 1)
+    frames, timestamps = create_frame_array(file_path, 1)
 
     # TODO: Implement actual algorithms for Localizing Plates
 
     # isolated_single = Localization.plate_detection(frames[70])
     # display_image(isolated_single)
     # isolated_single = Localization.plate_detection(frames[900])
-    isolated_single = Localization.plate_detection(frames[370])
-    display_image(isolated_single)
+    # isolated_single = Localization.plate_detection(frames[370])
+    # isolated_single = Localization.plate_detection(frames[770])
+    # display_image(isolated_single)
 
-    # isolated_plates = []
-    # for i in range(len(frames)):
-    #     cropped = Localization.plate_detection(frames[i])
-    #     if cropped is None:
-    #         isolated_plates.append(np.zeros((1, 1, 1)))
-    #     elif cropped.shape[0] > 0 and cropped.shape[1] > 0:
-    #         isolated_plates.append(cropped)
-    #
-    # for plate in isolated_plates:
-    #     display_image(plate)
+    isolated_plates = []
+    for i in range(len(frames)):
+        cropped = Localization.plate_detection(frames[i])
+        if cropped is None:
+            isolated_plates.append(np.zeros((1, 1, 1)))
+        elif cropped.shape[0] > 0 and cropped.shape[1] > 0:
+            isolated_plates.append(cropped)
+
+    for plate in isolated_plates:
+        display_image(plate)
 
     # display_complete_video(isolated_plates)
 
