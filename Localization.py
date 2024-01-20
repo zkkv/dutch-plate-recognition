@@ -13,14 +13,14 @@ import scipy.ndimage as ndimage
 def visualise(im, x_min, y_min, x_max, y_max):
     fig, ax = plt.subplots()
     ax.imshow(im)
-    rect = patches.Rectangle((y_min, x_min), y_max - y_min, x_max - x_min, 
+    rect = patches.Rectangle((y_min, x_min), y_max - y_min, x_max - x_min,
                              linewidth=1, edgecolor='r', facecolor='none')
     ax.add_patch(rect)
     plt.show()
 
 
 def generate_mask(image):
-    color_mask = mask_colors_by_color(image)
+    color_mask = mask_image_by_color(image)
     morphed_mask = apply_morphology(color_mask)
     filtered_mask = apply_median_filter(morphed_mask)
     return filtered_mask
@@ -80,7 +80,7 @@ def evaluate(frames_path, plot_gt: bool = True):
             ax.add_patch(rect)
             if plot_gt:
                 img_id = file2id[file]
-                if img_id in id2anns.keys(): 
+                if img_id in id2anns.keys():
                     bbox_gt = id2anns[img_id]
                     for b in bbox_gt:
                         x_min, y_min, w, h = b
@@ -120,7 +120,7 @@ def crop_image_based_on_mask(image, mask, return_bbox: bool = False):
     return image[x_min:x_max, y_min:y_max]
 
 
-def mask_colors_by_color(image_bgr):
+def mask_image_by_color(image_bgr):
     image_hsi = cv2.cvtColor(image_bgr, cv2.COLOR_BGR2HSV)
 
     color_min = np.array([10, 70, 50])
@@ -158,6 +158,67 @@ def detect_edges(image):
     return binary_image
 
 
+def find_bbox_using_contours(canny_image, original_image=None):
+    contours, output_image = cv2.findContours(canny_image.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    cnts = sorted(contours, key=cv2.contourArea, reverse=True)[:30]
+    # cv2.drawContours(original_image, cnts, 0, (0, 255, 0), 3)
+    if len(cnts) == 0:
+        return 0, 0, len(canny_image[1]), len(canny_image[0])
+    x, y, w, h = cv2.boundingRect(cnts[0])
+    return x, y, w, h
+
+
+def find_lines_using_hough(canny_image):
+    lines = cv2.HoughLines(canny_image, 3, np.pi / 180 * 2, 95)
+    # lines = cv2.HoughLinesP(bbox_canny, 1, np.pi / 180 * 1, 1, minLineLength=20, maxLineGap=10)
+    return lines
+
+
+def draw_lines_on_image(lines, image):
+    if lines is not None:
+        thetas = []
+        for i in range(0, len(lines)):
+            # x1, y1, x2, y2 = lines[i][0]
+            # pt1 = (x1, y1)
+            # pt2 = (x2, y2)
+            rho = lines[i][0][0]
+            theta = lines[i][0][1]
+            thetas.append(round(theta, 3))
+            # if abs(abs(theta) - np.pi) > np.pi / 180 * 5:
+            #     continue
+            a = np.cos(theta)
+            b = np.sin(theta)
+            x0 = a * rho
+            y0 = b * rho
+            pt1 = (int(x0 + 1000 * (-b)), int(y0 + 1000 * (a)))
+            pt2 = (int(x0 - 1000 * (-b)), int(y0 - 1000 * (a)))
+
+            cv2.line(image, pt1, pt2, (0, 0, 255), 1, cv2.LINE_AA)
+
+        # print(np.unique(thetas), len(lines))
+
+
+def crop_image_with_margin(x, y, w, h, frac_x, frac_y, image):
+    """
+    x, y, w, h - bbox
+    frac_x, frac_y - [0, 1] how much to step relative to bbox dimensions
+    image - image to crop
+    """
+    step_x = int(frac_x * (x + w))
+    step_y = int(frac_y * (y + h))
+    return image[y - step_y:y + h + 1 + step_y, x - step_x:x + w + 1 + step_x]
+
+
+def get_rotation_angle_from_lines(lines):
+    if lines is not None:
+        thetas_rad = lines[:, 0, 1]
+        thetas_degrees = np.rad2deg(thetas_rad)
+        median_angle = int(np.median(thetas_degrees))
+        return median_angle - 90
+    else:
+        return 0
+
+
 def plate_detection(image, return_bbox: bool = False):
     """
     In this file, you need to define plate_detection function.
@@ -177,95 +238,26 @@ def plate_detection(image, return_bbox: bool = False):
     # TODO: Consider adding histogram equalization
     # TODO: Return array of images for images with several plates
 
-    image_color_masked = mask_colors_by_color(image)
-    image_gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    # retval, binary_image = cv2.threshold(image_gray, thresh=127, maxval=255, type=cv2.THRESH_BINARY)
-    canny_image = cv2.Canny(image_color_masked, 10, 160)
+    image_masked = mask_image_by_color(image)
+    canny_image = cv2.Canny(image_masked, 10, 160)
     canny_image_fat = cv2.morphologyEx(canny_image, cv2.MORPH_DILATE, np.ones((5, 5)))
 
-    contours, output_image = cv2.findContours(canny_image_fat.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-    cnts = sorted(contours, key=cv2.contourArea, reverse=True)[:30]
-    # cv2.drawContours(image, cnts, 0, (0, 255, 0), 3)
+    x, y, w, h = find_bbox_using_contours(canny_image_fat)
 
-    x, y, w, h = cv2.boundingRect(cnts[0])
-    bbox = image[y:y + h + 1, x:x + w + 1]
+    bbox = crop_image_with_margin(x, y, w, h, 0, 0, image)
+    # bbox = crop_image_with_margin(x, y, w, h, 0.1, 0.1, image)
+    bbox_canny_fat = crop_image_with_margin(x, y, w, h, 0, 0, canny_image_fat)
+    bbox_canny = crop_image_with_margin(x, y, w, h, 0.1, 0.1, canny_image)
+    lines = find_lines_using_hough(bbox_canny)
 
-    # step 10% in each direction for hough to work better
-    step = int(0.1 * (y + h))
-    bbox_canny = canny_image[y - step:y + h + 1 + step, x - step:x + w + 1 + step]
-    bbox_canny_fat = canny_image_fat[y:y + h + 1, x:x + w + 1]
-    # bbox = image[y - step:y + h + 1 + step, x - step:x + w + 1 + step]
+    # draw_lines_on_image(lines, bbox)
+    angle = get_rotation_angle_from_lines(lines)
+    rotated_bbox_canny_fat = ndimage.rotate(bbox_canny_fat, angle)
+    x, y, w, h = find_bbox_using_contours(rotated_bbox_canny_fat)
 
-    lines = cv2.HoughLines(bbox_canny, 3, np.pi / 180 * 2, 95)
-    # lines = cv2.HoughLinesP(bbox_canny, 1, np.pi / 180 * 1, 1, minLineLength=20, maxLineGap=10)
-
-    # location = None
-    # plate = None
-    # for contour in cnts:
-    #     approx = cv2.approxPolyDP(contour, 10, True)
-    #     if len(approx) == 4:
-    #         x, y, w, h = cv2.boundingRect(contour)
-    #         location = approx
-    #         plate = image[y:y + h + 1, x:x + w + 1]
-    #         break
-
-    # mask = np.zeros(image_gray.shape, np.uint8)
-    # if plate is not None:
-    #     cv2.drawContours(mask, [location], 0, (0, 255, 0), 3)
-    # print(np.unique(mask))
-    # print(location)
-    # new_image = cv2.bitwise_and(image, image, mask=mask)
-
-    # if lines is not None:
-    #     thetas = []
-    #     for i in range(0, len(lines)):
-    #         # x1, y1, x2, y2 = lines[i][0]
-    #         # pt1 = (x1, y1)
-    #         # pt2 = (x2, y2)
-    #         rho = lines[i][0][0]
-    #         theta = lines[i][0][1]
-    #         thetas.append(round(theta, 3))
-    #         # if abs(abs(theta) - np.pi) > np.pi / 180 * 5:
-    #         #     continue
-    #         a = np.cos(theta)
-    #         b = np.sin(theta)
-    #         x0 = a * rho
-    #         y0 = b * rho
-    #         pt1 = (int(x0 + 1000 * (-b)), int(y0 + 1000 * (a)))
-    #         pt2 = (int(x0 - 1000 * (-b)), int(y0 - 1000 * (a)))
-    #
-    #         cv2.line(bbox, pt1, pt2, (0, 0, 255), 1, cv2.LINE_AA)
-    #
-    #     print(np.unique(thetas), len(lines))
-
-    if lines is not None:
-        thetas_rad = lines[:, 0, 1]
-        thetas_degrees = np.rad2deg(thetas_rad)
-        median_angle = int(np.median(thetas_degrees))
-        # print(thetas_degrees)
-        # print(median_angle)
-        rotated_bbox = ndimage.rotate(bbox, median_angle - 90)
-        rotated_bbox_canny_fat = ndimage.rotate(bbox_canny_fat, median_angle - 90)
-
-        # cv2.imshow('image', bbox_canny_fat)
-        # cv2.waitKey(0)
-        # cv2.imshow('image', rotated_bbox_canny_fat)
-        # cv2.waitKey(0)
-
-
-        contours, output_image = cv2.findContours(rotated_bbox_canny_fat.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-        cnts = sorted(contours, key=cv2.contourArea, reverse=True)[:30]
-        cv2.drawContours(rotated_bbox, cnts, 0, (0, 255, 0), 3)
-
-        x, y, w, h = cv2.boundingRect(cnts[0])
-        bbox = rotated_bbox[y:y + h + 1, x:x + w + 1]
-
-        return bbox
-
-    # Old color-based method
-    # mask = generate_mask(image_processed)
-    # cropped_image = crop_image_based_on_mask(image_processed, mask, return_bbox)
-    return bbox
+    rotated_bbox = ndimage.rotate(bbox, angle)
+    final_bbox = crop_image_with_margin(x, y, w, h, 0, 0, rotated_bbox)
+    return final_bbox
 
 
 if __name__ == '__main__':
