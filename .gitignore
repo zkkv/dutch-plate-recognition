@@ -4,6 +4,7 @@
 
 dataset/sampled
 *.zip
+dataset/Output.csv
 
 ### Python ###
 # Byte-compiled / optimized / DLL files
