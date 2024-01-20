@@ -118,54 +118,111 @@ def segment_and_recognize(plate_images):
     """
     data_path = "dataset"
     references = create_sift_references(data_path)
+    result = []
     for plate in plate_images:
-        plate = cv2.cvtColor(plate, cv2.COLOR_BGR2GRAY)
-        plate = cv2.equalizeHist(plate)
-        bin_img = (plate < 80).astype(np.uint8)
-        edges = split(bin_img)
+        characters = segment_plate(plate, references)
+        if len(characters) < 8:
+            characters.extend(['' for _ in range(8 - len(characters))])
+        elif len(characters) > 8:
+            characters = characters[:8]
+        result.append(characters)
+        # orig = plate.copy()
+        # plate = cv2.cvtColor(plate, cv2.COLOR_BGR2GRAY)
+        # cv2.imshow('', plate)
+        # cv2.waitKey(25)
+        # plate = cv2.equalizeHist(plate)
+        # cv2.imshow('', plate)
+        # cv2.waitKey(25)
+        # bboxes = get_contours(plate)
+        # bboxes = sorted(bboxes, key=lambda x: x[0])
+        # bin_img = (plate < 80).astype(np.uint8)
+        # edges = split(bin_img)
+        #
+        # characters = []
+        #
+        # for bbox in bboxes:
+        #     x, y, w, h = bbox
+        #     cv2.rectangle(orig, (x, y), (x + w, y + h), thickness=3, color=(0, 255, 0))
+        #
+        #     if w < plate.shape[1] * 0.05:
+        #         characters.append('-')
+        #         continue
+        #     x = plate[y:y+h, x:x+w]
+        #     # cv2.imshow('', x)
+        #     # cv2.waitKey(1000)
+        #     char, _ = test_sift(x, references)
+        #     characters.append(char)
 
-        characters = []
+        # for i in range(len(edges)):
+        #     if edges[i][1] - edges[i][0] < plate.shape[1] * 0.05:
+        #         characters.append('-')
+        #         continue
+        #     x = plate[:, edges[i][0]:edges[i][1]]
+        #     char, _ = test_sift(x, references)
+        #     characters.append(char)
+        #
+        # print(characters)
+        # cv2.imshow('plate', orig)
+        # cv2.waitKey(0)
+    return result
 
-        for i in range(len(edges)):
-            if edges[i][1] - edges[i][0] < plate.shape[1] * 0.05:
-                characters.append('-')
-                continue
-            x = plate[:, edges[i][0]:edges[i][1]]
-            char, _ = test_sift(x, references)
-            characters.append(char)
 
-        print(characters)
-        cv2.imshow('plate', plate)
-        cv2.waitKey(0)
+def clean_characters(chars):
+    while len(chars) and chars[0] == '-':
+        chars.pop(0)
+    while len(chars) and chars[-1] == '-':
+        chars.pop()
+    return chars
 
 
-    # references = create_references(LETTERS, NUMBERS, (70, 70))
-    # c = 0
+def segment_plate(plate, references):
+    orig = clean_image(plate.copy())
+    plate = cv2.cvtColor(plate, cv2.COLOR_BGR2GRAY)
+    plate = cv2.equalizeHist(plate)
+    # _, bin_img = cv2.threshold(plate, 80, 255, cv2.THRESH_BINARY_INV)
+    # cv2.imshow('binary', bin_img)
+    bin_img = (plate < 80).astype(np.uint8)
+    edges = split(bin_img)
+
+    characters = []
+
+    for i in range(len(edges)):
+        if edges[i][1] - edges[i][0] < plate.shape[1] * 0.06:
+            characters.append('-')
+            continue
+
+        # bbox = get_contours(bin_img[:, edges[i][0]:edges[i][1]] * 255, plate[:, edges[i][0]:edges[i][1]])
+        # x, y, w, h = bbox
+        crop = plate[:, edges[i][0]:edges[i][1]]
+        # cv2.imshow('', crop)
+        # cv2.waitKey(1000)
+        char, _ = test_sift(crop, references)
+        characters.append(char)
+
+    # for bbox in bboxes:
+    #     x, y, w, h = bbox
+    #     print(w / h)
+    #     cv2.rectangle(orig, (x, y), (x + w, y + h), thickness=3, color=(0, 255, 0))
     #
-    # for plate, orig_size in plate_images:
-    #     plate = cv2.equalizeHist(plate)
-    #     ratio = orig_size[0] / orig_size[1]
-    #     bin_img = (plate < 80).astype(np.uint8)
-    #     edges = split(bin_img, ratio)
-    #     debug_imgs = []
-    #     chars = []
-    #     for i in range(len(edges)):
-    #         x = bin_img[:, edges[i][0]:edges[i][1]]
-    #         x = clean(x)
-    #         x = cv2.resize(x, (70, 70))
-    #         debug_imgs.append(x)
-    #         # plt.imshow(x)
-    #         # plt.show()
-    #         if np.count_nonzero(x) < 900:
-    #             chars.append("-")
-    #         else:
-    #             chars.append(xor(x, references))
-    #
-    #     c += 1
-    #     debug_plates(plate, debug_imgs, c)
-    #     # chars = recognize(plate, references)
-    #     print(chars)
-    #     print("\n")
+    #     if w < plate.shape[1] * 0.05:
+    #         characters.append('-')
+    #         continue
+    #     x = plate[y:y + h, x:x + w]
+    #     # cv2.imshow('', x)
+    #     # cv2.waitKey(1000)
+    #     char, _ = test_sift(x, references)
+    #     characters.append(char)
+
+    return clean_characters(characters)
+
+
+def clean_image(plate):
+    if len(plate.shape) == 2:
+        height, width = plate.shape
+    else:
+        height, width, _ = plate.shape
+    plate = plate[int(height*0.1):int(height*0.9), int(width*0.03):int(width*0.97)]
+    return plate
 
 
 def split(plate):
@@ -185,7 +242,7 @@ def split(plate):
             counter += 1
 
         else:
-            print(counter, height, width)
+            # print(counter, height, width)
             # if counter > 8 / ratio:
             if counter > 0.025 * width:
                 edges.append((last, i))
@@ -249,6 +306,32 @@ def create_sift_descriptor(image):
     return descriptors
 
 
+def get_contours(plate_image, orig):
+    # cv2.imshow('plate', plate_image)
+    # cv2.waitKey(5000)
+    canny_image = cv2.Canny(plate_image, 50, 100)
+    # canny_image = cv2.morphologyEx(canny_image, cv2.MORPH_DILATE, np.ones((3, 3)))
+    # cv2.imshow('canny', canny_image)
+    # cv2.waitKey(25)
+    contours, output_image = cv2.findContours(canny_image.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+
+    cnts = sorted(contours, key=lambda x: cv2.arcLength(x, False), reverse=True)[:30]
+    area = plate_image.shape[0] * plate_image.shape[1] * 0.1
+    cnts = list(filter(lambda x: cv2.contourArea(x) < area, cnts))
+
+    if len(cnts) == 0:
+        return 0, 0, len(canny_image[1]), len(canny_image[0])
+
+    bboxes = []
+    cv2.drawContours(orig, cnts, 0, (255, 0, 0), thickness=2)
+    cv2.imshow('contours', orig)
+    cv2.waitKey(1000)
+    # for i in range(len(cnts)):
+    #     bboxes.append(cv2.boundingRect(cnts[i]))
+    # filtered = list(filter(lambda x: x[2] / x[3] < 1 or abs(x[2] / x[3] - 2) < 0.2, bboxes))
+    return cv2.boundingRect(cnts[0])
+
+
 def create_sift_references(data_path):
     references = {}
     numbers_path = os.path.join(data_path, "SameSizeNumbers")
@@ -291,7 +374,10 @@ def test_sift(image, references):
             for ref in v:
                 matches = bf.match(descriptor, ref)
                 distances = [x.distance for x in sorted(matches, key=lambda x: x.distance)]
-                sim += sum(distances) / len(distances)
+                if len(distances):
+                    sim += sum(distances) / len(distances)
+                else:
+                    sim += 5000
             sim /= len(v)
             scores.append((k, sim))
             if sim < score:
@@ -300,58 +386,16 @@ def test_sift(image, references):
     return char, scores
 
 
+def load_data(data_path):
+    images = []
+    references = create_sift_references('dataset')
+    for file in sorted(os.listdir(data_path)):
+        image = cv2.imread(os.path.join(data_path, file))
+        segment_plate(image, references)
+
+    return images
+
+
 if __name__ == '__main__':
-    plate_path = 'dataset/sampled/recognition_test/img_1.png'
-    # frame_path1 = 'dataset/SameSizeNumbers/8/img_1.png'
-    # frame_path2 = 'dataset/SameSizeNumbers/4/img_1.png'
-    # image1 = cv2.imread(frame_path1)
-    plate = cv2.imread(plate_path)
-    # top, bottom, left, right = color_mask(plate)
-    plate = cv2.cvtColor(plate, cv2.COLOR_BGR2GRAY)
-    # plate = cv2.resize(plate, (560, 70))
-    # image2 = cv2.imread(frame_path2)
-    # plate_detection(image, True)
-    # evaluate(frames_path)
-    # sift_experiments(image1, image2)
-    plate = cv2.equalizeHist(plate)
-    bin_img = (plate < 80).astype(np.uint8)
-    edges = split(bin_img)
-
-    data_path = "dataset"
-    references = create_sift_references(data_path)
-    # test_sift(image1, references)
-    characters = []
-
-    for i in range(len(edges)):
-        if edges[i][1] - edges[i][0] < plate.shape[1] * 0.05:
-            characters.append('-')
-            continue
-        x = plate[:, edges[i][0]:edges[i][1]]
-        char, _ = test_sift(x, references)
-        characters.append(char)
-
-
-    print(characters)
-# if __name__ == '__main__':
-#     folder_path = "/home/ksenia/Delft_CSE/Year2/Module2/Image_Processing/ip-team-20/dataset/sampled/recognition_test"
-#     plates = []
-#     for file in os.listdir(folder_path):
-#         print(file)
-#         img = load_image(os.path.join(folder_path, file), grayscale=False)
-#         # plt.imshow(img, cmap="gray")
-#         # plt.show()
-#         top, bottom, left, right = color_mask(img)
-#         plate = cv2.cvtColor(img[top:bottom, left:right], cv2.COLOR_BGR2GRAY)
-#         # plate = cv2.equalizeHist(plate)
-#         # bin_img = (plate < 80).astype(np.uint8)
-#         # plt.imshow(plate, cmap="gray")
-#         # plt.show()
-#         # plt.imshow(bin_img , cmap="gray")
-#         # plt.show()
-#         orig_size = plate.shape
-#         plate = cv2.resize(plate, (560, 70))
-#         # bin_img = (img < 100).astype(np.uint8)
-#         # edges = split(bin_img)
-#
-#         plates.append((plate, orig_size))
-#     segment_and_recognize(plates)
+    images = load_data('dataset/localization-results')
+    # segment_and_recognize(images)
