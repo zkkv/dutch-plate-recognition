@@ -13,6 +13,7 @@ def create_frame_array(filepath, rate=24):
 
     # Read until video is completed
     frame_list = []
+    timestamp_list = []
     has_returned_frame = True
     counter = 0
 
@@ -20,11 +21,11 @@ def create_frame_array(filepath, rate=24):
         has_returned_frame, frame = cap.read()
         if has_returned_frame and (counter + 1) % rate == 0:
             frame_list.append(frame)
-        counter += 1
-
+            timestamp_list.append(cap.get(cv2.CAP_PROP_POS_MSEC) / 1000)
+            counter += 1
     cap.release()
     cv2.destroyAllWindows()
-    return np.array(frame_list)
+    return np.array(frame_list), np.array(timestamp_list)
 
 
 if __name__ == '__main__':

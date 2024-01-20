@@ -13,7 +13,7 @@ from helpers.display import display_image_with_mask
 from helpers.display import display_histogram
 from helpers.display import display_multiple_hsi_histograms_and_images
 from helpers.create_frame_array import create_frame_array
-from helpers.generate_csv_from_array import generate_csv_from_array
+from helpers.generate_csv_from_array import generate_csv_from_arrays
 
 
 def CaptureFrame_Process(file_path, sample_frequency, save_path):
@@ -32,33 +32,40 @@ def CaptureFrame_Process(file_path, sample_frequency, save_path):
     Output: None
     """
 
+    print("STARTED")
     # TODO: Read frames from the video (saved at `file_path`) by making use of `sample_frequency`
-    frames = create_frame_array(file_path, 1)
+    frames, timestamps = create_frame_array(file_path, 1)
 
     # TODO: Implement actual algorithms for Localizing Plates
 
-    # isolated_single = Localization.plate_detection(frames[1200])
+    # isolated_single = Localization.plate_detection(frames[70])
     # display_image(isolated_single)
+    # isolated_single = Localization.plate_detection(frames[900])
+    # isolated_single = Localization.plate_detection(frames[370])
+    # isolated_single = Localization.plate_detection(frames[770])
+    # isolated_single = Localization.plate_detection(frames[1091])
+    # display_image(isolated_single)
+    # prediction_single = Recognize.segment_and_recognize([isolated_single])
 
     isolated_plates = []
     for i in range(len(frames)):
         cropped = Localization.plate_detection(frames[i])
-        if cropped.shape[0] > 0 and cropped.shape[1] > 0:
+        if cropped is None:
+            isolated_plates.append(np.zeros((1, 1, 1)))
+        elif cropped.shape[0] > 0 and cropped.shape[1] > 0:
             isolated_plates.append(cropped)
 
-    Recognize.segment_and_recognize(isolated_plates)
+    predictions = Recognize.segment_and_recognize(isolated_plates)
+    # for plate in isolated_plates:
+    #     display_image(plate)
+
     # display_complete_video(isolated_plates)
 
-    # TODO: Implement actual algorithms for Recognizing Characters
-
+    # example_csv = [("AB-CD-88", 200, 42.12), ("XYZ-A22", 500, 90.1)]
+    output_csv = generate_csv_from_arrays(predictions, np.arange(len(predictions)), timestamps)
     output = open(save_path, "w")
     output.write("License plate,Frame no.,Timestamp(seconds)\n")
+    output.write(output_csv)
+    output.close()
 
-    # TODO: REMOVE THESE (below) and write the actual values in `output`
-    example_result = [("AB-CD-88", 200, 42.12), ("XYZ-A22", 500, 90.1)]
-    example_csv = generate_csv_from_array(example_result)
-    output.write(example_csv)
-
-    # TODO: REMOVE THESE (above) and write the actual values in `output`
-
-    pass
+    print("DONE")
