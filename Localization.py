@@ -7,6 +7,7 @@ import cv2.gapi
 import numpy as np
 import matplotlib.patches as patches
 import matplotlib.pyplot as plt
+import scipy.ndimage as ndimage
 
 
 def visualise(im, x_min, y_min, x_max, y_max):
@@ -180,27 +181,32 @@ def plate_detection(image, return_bbox: bool = False):
     image_gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     # retval, binary_image = cv2.threshold(image_gray, thresh=127, maxval=255, type=cv2.THRESH_BINARY)
     canny_image = cv2.Canny(image_color_masked, 10, 160)
-    canny_image = cv2.morphologyEx(canny_image, cv2.MORPH_DILATE, np.ones((5, 5)))
+    canny_image_fat = cv2.morphologyEx(canny_image, cv2.MORPH_DILATE, np.ones((5, 5)))
 
-    lines = cv2.HoughLines(canny_image, 3, np.pi / 180 * 5, 50)
-    #lines = cv2.HoughLinesP(canny_image, 3, np.pi / 180 * 1, 1, minLineLength=80, maxLineGap=10)
-
-    contours, output_image = cv2.findContours(canny_image.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    contours, output_image = cv2.findContours(canny_image_fat.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
     cnts = sorted(contours, key=cv2.contourArea, reverse=True)[:30]
-    cv2.drawContours(image, cnts, 0, (0, 255, 0), 3)
+    # cv2.drawContours(image, cnts, 0, (0, 255, 0), 3)
 
     x, y, w, h = cv2.boundingRect(cnts[0])
-    return image[y:y + h + 1, x:x + w + 1]
+    bbox = image[y:y + h + 1, x:x + w + 1]
 
-    location = None
-    plate = None
-    for contour in cnts:
-        approx = cv2.approxPolyDP(contour, 10, True)
-        if len(approx) == 4:
-            x, y, w, h = cv2.boundingRect(contour)
-            location = approx
-            plate = image[y:y + h + 1, x:x + w + 1]
-            break
+    # step 10% in each direction for hough to work better
+    step = int(0.1 * (y + h))
+    bbox_canny = canny_image[y - step:y + h + 1 + step, x - step:x + w + 1 + step]
+    # bbox = image[y - step:y + h + 1 + step, x - step:x + w + 1 + step]
+
+    lines = cv2.HoughLines(bbox_canny, 3, np.pi / 180 * 5, 50)
+    # lines = cv2.HoughLinesP(bbox_canny, 1, np.pi / 180 * 1, 1, minLineLength=20, maxLineGap=10)
+
+    # location = None
+    # plate = None
+    # for contour in cnts:
+    #     approx = cv2.approxPolyDP(contour, 10, True)
+    #     if len(approx) == 4:
+    #         x, y, w, h = cv2.boundingRect(contour)
+    #         location = approx
+    #         plate = image[y:y + h + 1, x:x + w + 1]
+    #         break
 
     # mask = np.zeros(image_gray.shape, np.uint8)
     # if plate is not None:
@@ -225,12 +231,24 @@ def plate_detection(image, return_bbox: bool = False):
     #         pt1 = (int(x0 + 1000 * (-b)), int(y0 + 1000 * (a)))
     #         pt2 = (int(x0 - 1000 * (-b)), int(y0 - 1000 * (a)))
     #
-    #         cv2.line(image, pt1, pt2, (0, 0, 255), 1, cv2.LINE_AA)
+    #         cv2.line(bbox, pt1, pt2, (0, 0, 255), 1, cv2.LINE_AA)
+
+
+
+    if lines is not None:
+        thetas_rad = lines[:, 0, 1]
+        thetas_degrees = np.rad2deg(thetas_rad)
+        median_angle = int(np.median(thetas_degrees))
+        # print(thetas_degrees)
+        # print(median_angle)
+        rotated_bbox = ndimage.rotate(bbox, median_angle - 90)
+
+        return rotated_bbox
 
     # Old color-based method
     # mask = generate_mask(image_processed)
     # cropped_image = crop_image_based_on_mask(image_processed, mask, return_bbox)
-    return image
+    return bbox
 
 
 if __name__ == '__main__':
