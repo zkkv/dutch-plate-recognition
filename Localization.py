@@ -7,6 +7,8 @@ import numpy as np
 import matplotlib.patches as patches
 import matplotlib.pyplot as plt
 
+# from Recognize import create_references
+
 
 def visualise(im, x_min, y_min, x_max, y_max):
     fig, ax = plt.subplots()
@@ -201,6 +203,14 @@ def calculate_hough(image):
     return lines
 
 
+def calculate_sift(image):
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    sift = cv2.SIFT_create()
+    kp = sift.detect(gray, None)
+    image = cv2.drawKeypoints(gray, kp, image)
+    return image
+
+
 def filter_lines(lines, bbox):
     y_min, x_min, y_max, x_max = bbox
     result = []
@@ -236,30 +246,61 @@ def plate_detection(image, return_bbox: bool = False):
     """
     # TODO: Consider adding histogram equalization
     # TODO: Return array of images for images with several plates
+    sift_image = calculate_sift(image)
+    cv2.imshow('sift', sift_image)
+    cv2.waitKey()
     lines = calculate_hough(image)
-
     mask = generate_mask(image)
     bbox = crop_image_based_on_mask(image, mask, return_bbox)
     x_min, y_min, x_max, y_max = bbox
     cropped_image = image[x_min:x_max, y_min:y_max]
-    plt.imshow(cropped_image)
-    plt.show()
+    # plt.imshow(cropped_image)
+    # plt.show()
 
     filtered_lines = filter_lines(lines, bbox)
 
-    plt.imshow(cropped_image)
+    # plt.imshow(cropped_image)
     for line in filtered_lines:
         x1, y1, x2, y2 = line
-        plt.plot([x1, x2], [y1, y2], linewidth=2)
-    plt.show()
+        color = (np.random.randint(255), np.random.randint(255), np.random.randint(255))
+        cv2.line(cropped_image, (x1, y1), (x2, y2), color, 3)
+        # plt.plot([x1, x2], [y1, y2], linewidth=2)
+        print(line)
+    # plt.show()
     return cropped_image
 
 
-if __name__ == '__main__':
-    frame_path = 'dataset/sampled/images/frame_1.png'
-    image = cv2.imread(frame_path)
-    plate_detection(image, True)
-    # evaluate(frames_path)
+def sift_experiments(image1, image2):
+    img1 = cv2.cvtColor(image1, cv2.COLOR_BGR2GRAY)
+    img2 = cv2.cvtColor(image2, cv2.COLOR_BGR2GRAY)
+    sift = cv2.SIFT_create()
 
+    keypoints_1, descriptors_1 = sift.detectAndCompute(img1, None)
+    keypoints_2, descriptors_2 = sift.detectAndCompute(img2, None)
+
+    bf = cv2.BFMatcher(cv2.NORM_L1, crossCheck=True)
+
+    matches = bf.match(descriptors_1, descriptors_2)
+    matches = sorted(matches, key=lambda x: x.distance)
+    print([x.distance for x in matches])
+    img3 = cv2.drawMatches(image1, keypoints_1, image2, keypoints_2, matches[:5], img2, flags=2)
+    plt.imshow(img3), plt.show()
+# [2056.0, 2091.0, 2470.0, 2747.0, 3094.0]
+# [1983.0, 2058.0, 2201.0, 2237.0, 3030.0]
+
+
+
+# if __name__ == '__main__':
+#     # frame_path = 'dataset/sampled/images/frame_1.png'
+#     frame_path1 = 'dataset/SameSizeNumbers/8/img_1.png'
+#     # frame_path2 = 'dataset/SameSizeNumbers/4/img_1.png'
+#     image1 = cv2.imread(frame_path1)
+#     # image2 = cv2.imread(frame_path2)
+#     # plate_detection(image, True)
+#     # evaluate(frames_path)
+#     # sift_experiments(image1, image2)
+#     data_path = "dataset"
+#     references = create_sift_references(data_path)
+#     test_sift(image1, references)
 
 
