@@ -177,30 +177,56 @@ def plate_detection(image, return_bbox: bool = False):
     # TODO: Return array of images for images with several plates
 
     image_color_masked = mask_colors_by_color(image)
-    # image_gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    image_gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     # retval, binary_image = cv2.threshold(image_gray, thresh=127, maxval=255, type=cv2.THRESH_BINARY)
     canny_image = cv2.Canny(image_color_masked, 10, 160)
+    canny_image = cv2.morphologyEx(canny_image, cv2.MORPH_DILATE, np.ones((5, 5)))
 
     lines = cv2.HoughLines(canny_image, 3, np.pi / 180 * 5, 50)
     #lines = cv2.HoughLinesP(canny_image, 3, np.pi / 180 * 1, 1, minLineLength=80, maxLineGap=10)
 
-    if lines is not None:
-        for i in range(0, len(lines)):
-            # x1, y1, x2, y2 = lines[i][0]
-            # pt1 = (x1, y1)
-            # pt2 = (x2, y2)
-            rho = lines[i][0][0]
-            theta = lines[i][0][1]
-            # if abs(abs(theta) - np.pi) > np.pi / 180 * 5:
-            #     continue
-            a = np.cos(theta)
-            b = np.sin(theta)
-            x0 = a * rho
-            y0 = b * rho
-            pt1 = (int(x0 + 1000 * (-b)), int(y0 + 1000 * (a)))
-            pt2 = (int(x0 - 1000 * (-b)), int(y0 - 1000 * (a)))
+    contours, output_image = cv2.findContours(canny_image.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    cnts = sorted(contours, key=cv2.contourArea, reverse=True)[:30]
+    cv2.drawContours(image, cnts, 0, (0, 255, 0), 3)
 
-            cv2.line(image, pt1, pt2, (0, 0, 255), 1, cv2.LINE_AA)
+    x, y, w, h = cv2.boundingRect(cnts[0])
+    return image[y:y + h + 1, x:x + w + 1]
+
+    location = None
+    plate = None
+    for contour in cnts:
+        approx = cv2.approxPolyDP(contour, 10, True)
+        if len(approx) == 4:
+            x, y, w, h = cv2.boundingRect(contour)
+            location = approx
+            plate = image[y:y + h + 1, x:x + w + 1]
+            break
+
+    # mask = np.zeros(image_gray.shape, np.uint8)
+    # if plate is not None:
+    #     cv2.drawContours(mask, [location], 0, (0, 255, 0), 3)
+    # print(np.unique(mask))
+    # print(location)
+    # new_image = cv2.bitwise_and(image, image, mask=mask)
+
+    # if lines is not None:
+    #     for i in range(0, len(lines)):
+    #         # x1, y1, x2, y2 = lines[i][0]
+    #         # pt1 = (x1, y1)
+    #         # pt2 = (x2, y2)
+    #         rho = lines[i][0][0]
+    #         theta = lines[i][0][1]
+    #         # if abs(abs(theta) - np.pi) > np.pi / 180 * 5:
+    #         #     continue
+    #         a = np.cos(theta)
+    #         b = np.sin(theta)
+    #         x0 = a * rho
+    #         y0 = b * rho
+    #         pt1 = (int(x0 + 1000 * (-b)), int(y0 + 1000 * (a)))
+    #         pt2 = (int(x0 - 1000 * (-b)), int(y0 - 1000 * (a)))
+    #
+    #         cv2.line(image, pt1, pt2, (0, 0, 255), 1, cv2.LINE_AA)
+
     # Old color-based method
     # mask = generate_mask(image_processed)
     # cropped_image = crop_image_based_on_mask(image_processed, mask, return_bbox)
