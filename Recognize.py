@@ -119,51 +119,31 @@ def segment_and_recognize(plate_images):
     data_path = "dataset"
     references = create_sift_references(data_path)
     result = []
+    last = None
+    counts = [{} for _ in range(8)]
     for plate in plate_images:
         characters = segment_plate(plate, references)
-        if len(characters) < 8:
-            characters.extend(['' for _ in range(8 - len(characters))])
-        elif len(characters) > 8:
-            characters = characters[:8]
-        result.append(characters)
-        # orig = plate.copy()
-        # plate = cv2.cvtColor(plate, cv2.COLOR_BGR2GRAY)
-        # cv2.imshow('', plate)
-        # cv2.waitKey(25)
-        # plate = cv2.equalizeHist(plate)
-        # cv2.imshow('', plate)
-        # cv2.waitKey(25)
-        # bboxes = get_contours(plate)
-        # bboxes = sorted(bboxes, key=lambda x: x[0])
-        # bin_img = (plate < 80).astype(np.uint8)
-        # edges = split(bin_img)
-        #
-        # characters = []
-        #
-        # for bbox in bboxes:
-        #     x, y, w, h = bbox
-        #     cv2.rectangle(orig, (x, y), (x + w, y + h), thickness=3, color=(0, 255, 0))
-        #
-        #     if w < plate.shape[1] * 0.05:
-        #         characters.append('-')
-        #         continue
-        #     x = plate[y:y+h, x:x+w]
-        #     # cv2.imshow('', x)
-        #     # cv2.waitKey(1000)
-        #     char, _ = test_sift(x, references)
-        #     characters.append(char)
+        if len(characters) == 8:
+            result.append("".join(characters))
 
-        # for i in range(len(edges)):
-        #     if edges[i][1] - edges[i][0] < plate.shape[1] * 0.05:
-        #         characters.append('-')
-        #         continue
-        #     x = plate[:, edges[i][0]:edges[i][1]]
-        #     char, _ = test_sift(x, references)
-        #     characters.append(char)
-        #
-        # print(characters)
-        # cv2.imshow('plate', orig)
-        # cv2.waitKey(0)
+            # print(result[-1])
+            a = np.array([ord(x) for x in characters])
+            if last is not None:
+                if np.count_nonzero(a - last) >= 6:
+                    chars = []
+                    for i in range(8):
+                        tmp = dict(sorted(counts[i].items(), key=lambda item: item[1]))
+                        counts[i] = {}
+                        chars.append(list(tmp.keys())[-1])
+                    # print('change')
+                    # print(chars)
+            last = a
+
+            for i in range(8):
+                if characters[i] not in counts[i]:
+                    counts[i][characters[i]] = 0
+                counts[i][characters[i]] += 1
+
     return result
 
 
@@ -177,6 +157,8 @@ def clean_characters(chars):
 
 def segment_plate(plate, references):
     orig = clean_image(plate.copy())
+    cv2.imshow('Plate', plate)
+    cv2.waitKey(1000)
     plate = cv2.cvtColor(plate, cv2.COLOR_BGR2GRAY)
     plate = cv2.equalizeHist(plate)
     # _, bin_img = cv2.threshold(plate, 80, 255, cv2.THRESH_BINARY_INV)
@@ -296,7 +278,7 @@ def rotate_image(image, angle):
 
 
 def create_sift_descriptor(image):
-    if image.shape[-1] == 3:
+    if len(image.shape) == 3:
         img = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     else:
         img = image
@@ -391,11 +373,14 @@ def load_data(data_path):
     references = create_sift_references('dataset')
     for file in sorted(os.listdir(data_path)):
         image = cv2.imread(os.path.join(data_path, file))
-        segment_plate(image, references)
+        images.append(image)
+        # cv2.imshow('Plate', image)
+        # cv2.waitKey(1000)
+        # print(segment_plate(image, references))
 
     return images
 
 
 if __name__ == '__main__':
     images = load_data('dataset/localization-results')
-    # segment_and_recognize(images)
+    segment_and_recognize(images)
