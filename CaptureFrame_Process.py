@@ -40,17 +40,21 @@ def CaptureFrame_Process(file_path, sample_frequency, save_path):
     # isolated_single = Localization.plate_detection(frames[70])
     # display_image(isolated_single)
     # isolated_single = Localization.plate_detection(frames[900])
-    # display_image(isolated_single)
+    isolated_single = Localization.plate_detection(frames[370])
+    display_image(isolated_single)
 
-    isolated_plates = []
-    for i in range(len(frames)):
-        cropped = Localization.plate_detection(frames[i])
-        if cropped is None:
-            isolated_plates.append(np.zeros((1, 1, 1)))
-        elif cropped.shape[0] > 0 and cropped.shape[1] > 0:
-            isolated_plates.append(cropped)
+    # isolated_plates = []
+    # for i in range(len(frames)):
+    #     cropped = Localization.plate_detection(frames[i])
+    #     if cropped is None:
+    #         isolated_plates.append(np.zeros((1, 1, 1)))
+    #     elif cropped.shape[0] > 0 and cropped.shape[1] > 0:
+    #         isolated_plates.append(cropped)
+    #
+    # for plate in isolated_plates:
+    #     display_image(plate)
 
-    display_complete_video(isolated_plates)
+    # display_complete_video(isolated_plates)
 
     # TODO: Implement actual algorithms for Recognizing Characters
 
