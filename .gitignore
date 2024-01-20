@@ -3,6 +3,8 @@
 
 
 dataset/sampled
+*.zip
+
 ### Python ###
 # Byte-compiled / optimized / DLL files
 __pycache__/
