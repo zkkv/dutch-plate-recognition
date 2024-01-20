@@ -116,34 +116,56 @@ def segment_and_recognize(plate_images):
     Hints:
         You may need to define other functions.
     """
-
-    references = create_references(LETTERS, NUMBERS, (70, 70))
-    c = 0
-
-    for plate, orig_size in plate_images:
+    data_path = "dataset"
+    references = create_sift_references(data_path)
+    for plate in plate_images:
+        plate = cv2.cvtColor(plate, cv2.COLOR_BGR2GRAY)
         plate = cv2.equalizeHist(plate)
-        ratio = orig_size[0] / orig_size[1]
         bin_img = (plate < 80).astype(np.uint8)
-        edges = split(bin_img, ratio)
-        debug_imgs = []
-        chars = []
-        for i in range(len(edges)):
-            x = bin_img[:, edges[i][0]:edges[i][1]]
-            x = clean(x)
-            x = cv2.resize(x, (70, 70))
-            debug_imgs.append(x)
-            # plt.imshow(x)
-            # plt.show()
-            if np.count_nonzero(x) < 900:
-                chars.append("-")
-            else:
-                chars.append(xor(x, references))
+        edges = split(bin_img)
 
-        c += 1
-        debug_plates(plate, debug_imgs, c)
-        # chars = recognize(plate, references)
-        print(chars)
-        print("\n")
+        characters = []
+
+        for i in range(len(edges)):
+            if edges[i][1] - edges[i][0] < plate.shape[1] * 0.05:
+                characters.append('-')
+                continue
+            x = plate[:, edges[i][0]:edges[i][1]]
+            char, _ = test_sift(x, references)
+            characters.append(char)
+
+        print(characters)
+        cv2.imshow('plate', plate)
+        cv2.waitKey(0)
+
+
+    # references = create_references(LETTERS, NUMBERS, (70, 70))
+    # c = 0
+    #
+    # for plate, orig_size in plate_images:
+    #     plate = cv2.equalizeHist(plate)
+    #     ratio = orig_size[0] / orig_size[1]
+    #     bin_img = (plate < 80).astype(np.uint8)
+    #     edges = split(bin_img, ratio)
+    #     debug_imgs = []
+    #     chars = []
+    #     for i in range(len(edges)):
+    #         x = bin_img[:, edges[i][0]:edges[i][1]]
+    #         x = clean(x)
+    #         x = cv2.resize(x, (70, 70))
+    #         debug_imgs.append(x)
+    #         # plt.imshow(x)
+    #         # plt.show()
+    #         if np.count_nonzero(x) < 900:
+    #             chars.append("-")
+    #         else:
+    #             chars.append(xor(x, references))
+    #
+    #     c += 1
+    #     debug_plates(plate, debug_imgs, c)
+    #     # chars = recognize(plate, references)
+    #     print(chars)
+    #     print("\n")
 
 
 def split(plate):
@@ -163,9 +185,9 @@ def split(plate):
             counter += 1
 
         else:
-            # print(counter, height, width)
+            print(counter, height, width)
             # if counter > 8 / ratio:
-            if counter > 0.05 * width:
+            if counter > 0.025 * width:
                 edges.append((last, i))
             counter = 0
             flag = True
@@ -279,13 +301,13 @@ def test_sift(image, references):
 
 
 if __name__ == '__main__':
-    plate_path = 'dataset/sampled/recognition_test/img_17.png'
+    plate_path = 'dataset/sampled/recognition_test/img_1.png'
     # frame_path1 = 'dataset/SameSizeNumbers/8/img_1.png'
     # frame_path2 = 'dataset/SameSizeNumbers/4/img_1.png'
     # image1 = cv2.imread(frame_path1)
     plate = cv2.imread(plate_path)
-    top, bottom, left, right = color_mask(plate)
-    plate = cv2.cvtColor(plate[top:bottom, left:right], cv2.COLOR_BGR2GRAY)
+    # top, bottom, left, right = color_mask(plate)
+    plate = cv2.cvtColor(plate, cv2.COLOR_BGR2GRAY)
     # plate = cv2.resize(plate, (560, 70))
     # image2 = cv2.imread(frame_path2)
     # plate_detection(image, True)
@@ -294,20 +316,22 @@ if __name__ == '__main__':
     plate = cv2.equalizeHist(plate)
     bin_img = (plate < 80).astype(np.uint8)
     edges = split(bin_img)
-    print(edges)
 
     data_path = "dataset"
     references = create_sift_references(data_path)
     # test_sift(image1, references)
-    print(edges)
+    characters = []
 
     for i in range(len(edges)):
+        if edges[i][1] - edges[i][0] < plate.shape[1] * 0.05:
+            characters.append('-')
+            continue
         x = plate[:, edges[i][0]:edges[i][1]]
-        plt.imshow(x)
-        plt.show()
-        print(test_sift(x, references))
+        char, _ = test_sift(x, references)
+        characters.append(char)
 
 
+    print(characters)
 # if __name__ == '__main__':
 #     folder_path = "/home/ksenia/Delft_CSE/Year2/Module2/Image_Processing/ip-team-20/dataset/sampled/recognition_test"
 #     plates = []
