@@ -219,6 +219,10 @@ def get_rotation_angle_from_lines(lines):
         return 0
 
 
+def draw_bbox_over_image(x, y, w, h, image):
+    cv2.rectangle(image, (x, y), (x + w, y + h), (0, 255, 0), 2)
+
+
 def plate_detection(image, return_bbox: bool = False):
     """
     In this file, you need to define plate_detection function.
@@ -246,17 +250,18 @@ def plate_detection(image, return_bbox: bool = False):
 
     bbox = crop_image_with_margin(x, y, w, h, 0, 0, image)
     # bbox = crop_image_with_margin(x, y, w, h, 0.1, 0.1, image)
-    bbox_canny_fat = crop_image_with_margin(x, y, w, h, 0, 0, canny_image_fat)
     bbox_canny = crop_image_with_margin(x, y, w, h, 0.1, 0.1, canny_image)
     lines = find_lines_using_hough(bbox_canny)
 
     # draw_lines_on_image(lines, bbox)
     angle = get_rotation_angle_from_lines(lines)
-    rotated_bbox_canny_fat = ndimage.rotate(bbox_canny_fat, angle)
-    x, y, w, h = find_bbox_using_contours(rotated_bbox_canny_fat)
-
     rotated_bbox = ndimage.rotate(bbox, angle)
+
+    binarized = mask_image_by_color(rotated_bbox)
+    opened = cv2.morphologyEx(binarized, cv2.MORPH_OPEN, np.ones((3, 3)))
+    x, y, w, h = cv2.boundingRect(cv2.findNonZero(opened))
     final_bbox = crop_image_with_margin(x, y, w, h, 0, 0, rotated_bbox)
+
     return final_bbox
 
 
