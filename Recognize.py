@@ -38,9 +38,10 @@ def segment_and_recognize(plate_images, frames_numbers):
         # cv2.waitKey(1000)
         characters = segment_plate(plate, xor_references)
         # print(characters)
-        if len(characters) == 8:
+        if len(characters) == 8 and characters.count('-') == 2:
             a = np.array([ord(x) for x in characters])
             if last is not None:
+                # print(a - l)
                 if np.count_nonzero(a - last) >= 4:
                     chars = []
                     for i in range(8):
@@ -105,7 +106,7 @@ def segment_plate(plate, xor_references):
         x, y, w, h = cv2.boundingRect(cnt)
         ratio = w / h
         min_ratio_for_dashes = 1
-        if w * h / (bin_img.shape[0] * (edges[i][1] - edges[i][0])) < 0.35 and ratio >= min_ratio_for_dashes:
+        if ratio >= min_ratio_for_dashes:
             characters.append('-')
             continue
 

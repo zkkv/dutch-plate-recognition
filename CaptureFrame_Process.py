@@ -36,6 +36,7 @@ def CaptureFrame_Process(file_path, sample_frequency, save_path):
     print("STARTED")
     # TODO: Read frames from the video (saved at `file_path`) by making use of `sample_frequency`
     frames, timestamps = create_frame_array(file_path, 1)
+    # frames = frames[170:210]
     # frames, frames_numbers = Recognize.load_data('dataset/localization-results')
     # print(frames_numbers)
 

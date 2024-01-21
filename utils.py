@@ -41,6 +41,9 @@ def create_xor_references(letters_path, numbers_path, ref_size=(70, 70)):
                 _, bin_img = cv2.threshold(img, img.mean(), 255, cv2.THRESH_BINARY_INV)
             else:
                 _, bin_img = cv2.threshold(img, img.mean(), 255, cv2.THRESH_BINARY)
+
+            # cv2.imshow('Binary', bin_img)
+            # cv2.waitKey(1000)
             reference_characters[key].append(bin_img)
 
     return reference_characters
