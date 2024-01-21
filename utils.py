@@ -120,7 +120,7 @@ def get_contours(plate_image, orig):
     cnts = sorted(contours, key=lambda x: cv2.arcLength(x, True), reverse=True)[:30]
 
     if len(cnts) == 0:
-        return 0, 0, len(canny_image[1]), len(canny_image[0])
+        return None
 
     # cv2.drawContours(orig, cnts, 0, (255, 0, 0), thickness=2)
     # cv2.imshow('contours', orig)

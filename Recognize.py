@@ -10,7 +10,7 @@ LETTERS = "dataset/SameSizeLetters"
 NUMBERS = "dataset/SameSizeNumbers"
 
 
-def segment_and_recognize(plate_images):
+def segment_and_recognize(plate_images, frames_numbers):
     """
     In this file, you will define your own segment_and_recognize function.
     To do:
@@ -32,23 +32,27 @@ def segment_and_recognize(plate_images):
     xor_references = create_xor_references('dataset/SameSizeLetters', 'dataset/SameSizeNumbers')
     result = []
     last = None
+    start = 0
     counts = [{} for _ in range(8)]
+    filtered_frames_numbers = []
     for ind, plate in enumerate(plate_images):
-        cv2.imshow('Plate', plate)
-        cv2.waitKey(1000)
+        # cv2.imshow('Plate', plate)
+        # cv2.waitKey(1000)
         characters = segment_plate(plate, xor_references)
 
         if len(characters) == 8:
             a = np.array([ord(x) for x in characters])
             if last is not None:
-                if np.count_nonzero(a - last) >= 6:
+                if np.count_nonzero(a - last) >= 4:
                     chars = []
                     for i in range(8):
                         tmp = dict(sorted(counts[i].items(), key=lambda item: item[1]))
                         counts[i] = {}
                         chars.append(list(tmp.keys())[-1])
                     result.append("".join(chars))
-                    print(result[-1])
+                    filtered_frames_numbers.append(start)
+                    start = ind
+                    # print(result[-1])
             last = a
 
             for i in range(8):
@@ -56,7 +60,7 @@ def segment_and_recognize(plate_images):
                     counts[i][characters[i]] = 0
                 counts[i][characters[i]] += 1
 
-    return result
+    return result, filtered_frames_numbers
 
 
 def clean_characters(chars):
@@ -74,8 +78,8 @@ def segment_plate(plate, xor_references):
     plate = cv2.cvtColor(plate, cv2.COLOR_BGR2GRAY)
     plate = cv2.equalizeHist(plate)
     _, bin_img = cv2.threshold(plate, 80, 255, cv2.THRESH_BINARY_INV)
-    cv2.imshow('binary', bin_img)
-    cv2.waitKey(1000)
+    # cv2.imshow('binary', bin_img)
+    # cv2.waitKey(1000)
     edges = split(bin_img)
 
     characters = []
@@ -86,6 +90,8 @@ def segment_plate(plate, xor_references):
             continue
 
         cnt = get_contours(bin_img[:, edges[i][0]:edges[i][1]], plate[:, edges[i][0]:edges[i][1]])
+        if cnt is None:
+            continue
         x, y, w, h = cv2.boundingRect(cnt)
 
         if w / h > 1:
@@ -94,8 +100,8 @@ def segment_plate(plate, xor_references):
         bin_crop = bin_img[:, edges[i][0]:edges[i][1]]
         bin_crop = bin_crop[y:y+h, x:x+w]
         char, scores = xor(bin_crop, xor_references)
-        print(char)
-        print(scores)
+        # print(char)
+        # print(scores)
         characters.append(char)
 
     return clean_characters(characters)

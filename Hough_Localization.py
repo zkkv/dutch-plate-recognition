@@ -99,7 +99,7 @@ def detect_lines(image, r_max, theta_max):
     #             cv2.line(pimage, (x1, y1), (x2, y2), (0, 0, 255), 3)
     cv2.imshow("Src", image)
     # cv2.imshow("Src", pimage)
-    cv2.waitKey()
+    # cv2.waitKey()
 
 
 def get_pairs(lines):
@@ -163,8 +163,8 @@ def test(img):
     #     for line in v:
     #         x1, y1, x2, y2 = line[0]
     #         cv2.line(img, (x1, y1), (x2, y2), color, 3)
-    cv2.imshow("Result Image", img)
-    cv2.waitKey()
+    # cv2.imshow("Result Image", img)
+    # cv2.waitKey()
 
 
 if __name__ == "__main__":
