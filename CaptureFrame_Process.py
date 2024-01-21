@@ -34,7 +34,9 @@ def CaptureFrame_Process(file_path, sample_frequency, save_path):
 
     print("STARTED")
     # TODO: Read frames from the video (saved at `file_path`) by making use of `sample_frequency`
-    frames, timestamps = create_frame_array(file_path, 1)
+    # frames, timestamps = create_frame_array(file_path, 1)
+    frames, frames_numbers = Recognize.load_data('dataset/localization-results')
+    print(frames_numbers)
 
     # TODO: Implement actual algorithms for Localizing Plates
 
@@ -47,22 +49,27 @@ def CaptureFrame_Process(file_path, sample_frequency, save_path):
     # display_image(isolated_single)
     # prediction_single = Recognize.segment_and_recognize([isolated_single])
 
-    isolated_plates = []
-    for i in range(len(frames)):
-        cropped = Localization.plate_detection(frames[i])
-        if cropped is None:
-            isolated_plates.append(np.zeros((1, 1, 1)))
-        elif cropped.shape[0] > 0 and cropped.shape[1] > 0:
-            isolated_plates.append(cropped)
+    # isolated_plates = []
+    # for i in range(len(frames)):
+    #     cropped = Localization.plate_detection(frames[i])
+    #     if cropped is None:
+    #         isolated_plates.append(np.zeros((1, 1, 1)))
+    #     elif cropped.shape[0] > 0 and cropped.shape[1] > 0:
+    #         isolated_plates.append(cropped)
 
-    predictions = Recognize.segment_and_recognize(isolated_plates)
+    predictions = Recognize.segment_and_recognize(frames, frames_numbers)
+    actual_preds, frames_numbers = [], []
+    for pred in predictions:
+        actual_preds.append(pred[0])
+        frames_numbers.append(pred[1])
+    frames_numbers = np.array(frames_numbers)
     # for plate in isolated_plates:
     #     display_image(plate)
 
     # display_complete_video(isolated_plates)
 
     # example_csv = [("AB-CD-88", 200, 42.12), ("XYZ-A22", 500, 90.1)]
-    output_csv = generate_csv_from_arrays(predictions, np.arange(len(predictions)), timestamps)
+    output_csv = generate_csv_from_arrays(actual_preds, frames_numbers, frames_numbers * 1/12)
     output = open(save_path, "w")
     output.write("License plate,Frame no.,Timestamp(seconds)\n")
     output.write(output_csv)

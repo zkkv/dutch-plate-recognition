@@ -2,102 +2,12 @@ import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 import os
-from Localization import mask_colors_by_color
+from Localization import mask_image_by_color
+from utils import *
 
 
 LETTERS = "dataset/SameSizeLetters"
 NUMBERS = "dataset/SameSizeNumbers"
-
-
-def load_image(filepath, grayscale=True):
-    return cv2.imread(filepath, cv2.IMREAD_GRAYSCALE if grayscale else cv2.IMREAD_COLOR)
-
-
-def create_references(letters_path, numbers_path, ref_size):
-    reference_characters = {}
-    for folder in os.listdir(letters_path):
-        folder_path = os.path.join(letters_path, folder)
-        for file in os.listdir(folder_path):
-            key = folder.replace(".bmp", "")
-            file_path = os.path.join(folder_path, file)
-            if key not in reference_characters:
-                reference_characters[key] = []
-
-            img = cv2.resize(load_image(file_path), ref_size)
-            if file.endswith("png"):
-                bin_img = (img < img.mean()).astype(np.uint8)
-            else:
-                bin_img = (img > img.mean()).astype(np.uint8)
-
-            reference_characters[key].append(bin_img)
-
-    for folder in os.listdir(numbers_path):
-        folder_path = os.path.join(numbers_path, folder)
-        for file in os.listdir(folder_path):
-            key = folder.replace(".bmp", "")
-            file_path = os.path.join(folder_path, file)
-            if key not in reference_characters:
-                reference_characters[key] = []
-
-            img = cv2.resize(load_image(file_path), ref_size)
-            if file.endswith("png"):
-                bin_img = (img < img.mean()).astype(np.uint8)
-            else:
-                bin_img = (img > img.mean()).astype(np.uint8)
-
-            reference_characters[key].append(bin_img)
-
-    return reference_characters
-
-
-def xor(image, references):
-    lowest_score = 10e5
-    lowest_char = "0"
-    for char, refs in references.items():
-        score = 10e5
-        for ref in refs:
-            score = min(np.count_nonzero(image ^ ref) / np.count_nonzero(ref), score)
-
-        if score < lowest_score:
-            lowest_score = score
-            lowest_char = char
-
-    return lowest_char, lowest_score
-
-
-def debug(x, counter=None):
-    plt.imshow(x, cmap="gray")
-    if counter:
-        plt.savefig(f"test_{counter}.png")
-        plt.close()
-    else:
-        plt.imshow(x, cmap='gray')
-        plt.show()
-
-
-def debug_plates(img, plates, counter):
-    fig, axs = plt.subplots(int(np.ceil((len(plates) + 1) / 3)), 3)
-    for i in range(len(plates)):
-        try:
-            axs[i // 3, i % 3].imshow(plates[i])
-        except:
-            axs[i % 3].imshow(plates[i])
-    try:
-        axs[len(plates) // 3, len(plates) % 3].imshow(img)
-    except:
-        axs[len(plates) % 3].imshow(img)
-    # plt.show()
-    fig.savefig(f"test_{counter}.png")
-    plt.close()
-
-
-def clean(image):
-    top, bottom = 0, image.shape[0] - 1
-    while image[top, 0] and top < 20:
-        top += 1
-    while image[bottom, 0] and image.shape[0] - bottom < 20:
-        bottom -= 1
-    return image[top:bottom]
 
 
 def segment_and_recognize(plate_images):
@@ -117,16 +27,18 @@ def segment_and_recognize(plate_images):
         You may need to define other functions.
     """
     data_path = "dataset"
-    references = create_sift_references(data_path)
+    # sift_references = create_sift_references(data_path)
+    # contour_references = create_contours_references(data_path)
+    xor_references = create_xor_references('dataset/SameSizeLetters', 'dataset/SameSizeNumbers')
     result = []
     last = None
     counts = [{} for _ in range(8)]
-    for plate in plate_images:
-        characters = segment_plate(plate, references)
-        if len(characters) == 8:
-            result.append("".join(characters))
+    for ind, plate in enumerate(plate_images):
+        cv2.imshow('Plate', plate)
+        cv2.waitKey(1000)
+        characters = segment_plate(plate, xor_references)
 
-            # print(result[-1])
+        if len(characters) == 8:
             a = np.array([ord(x) for x in characters])
             if last is not None:
                 if np.count_nonzero(a - last) >= 6:
@@ -135,8 +47,8 @@ def segment_and_recognize(plate_images):
                         tmp = dict(sorted(counts[i].items(), key=lambda item: item[1]))
                         counts[i] = {}
                         chars.append(list(tmp.keys())[-1])
-                    # print('change')
-                    # print(chars)
+                    result.append("".join(chars))
+                    print(result[-1])
             last = a
 
             for i in range(8):
@@ -155,15 +67,15 @@ def clean_characters(chars):
     return chars
 
 
-def segment_plate(plate, references):
-    orig = clean_image(plate.copy())
-    cv2.imshow('Plate', plate)
-    cv2.waitKey(1000)
+def segment_plate(plate, xor_references):
+    """
+    Segments a single plate into characters.
+    """
     plate = cv2.cvtColor(plate, cv2.COLOR_BGR2GRAY)
     plate = cv2.equalizeHist(plate)
-    # _, bin_img = cv2.threshold(plate, 80, 255, cv2.THRESH_BINARY_INV)
-    # cv2.imshow('binary', bin_img)
-    bin_img = (plate < 80).astype(np.uint8)
+    _, bin_img = cv2.threshold(plate, 80, 255, cv2.THRESH_BINARY_INV)
+    cv2.imshow('binary', bin_img)
+    cv2.waitKey(1000)
     edges = split(bin_img)
 
     characters = []
@@ -173,41 +85,71 @@ def segment_plate(plate, references):
             characters.append('-')
             continue
 
-        # bbox = get_contours(bin_img[:, edges[i][0]:edges[i][1]] * 255, plate[:, edges[i][0]:edges[i][1]])
-        # x, y, w, h = bbox
-        crop = plate[:, edges[i][0]:edges[i][1]]
-        # cv2.imshow('', crop)
-        # cv2.waitKey(1000)
-        char, _ = test_sift(crop, references)
-        characters.append(char)
+        cnt = get_contours(bin_img[:, edges[i][0]:edges[i][1]], plate[:, edges[i][0]:edges[i][1]])
+        x, y, w, h = cv2.boundingRect(cnt)
 
-    # for bbox in bboxes:
-    #     x, y, w, h = bbox
-    #     print(w / h)
-    #     cv2.rectangle(orig, (x, y), (x + w, y + h), thickness=3, color=(0, 255, 0))
-    #
-    #     if w < plate.shape[1] * 0.05:
-    #         characters.append('-')
-    #         continue
-    #     x = plate[y:y + h, x:x + w]
-    #     # cv2.imshow('', x)
-    #     # cv2.waitKey(1000)
-    #     char, _ = test_sift(x, references)
-    #     characters.append(char)
+        if w / h > 1:
+            continue
+
+        bin_crop = bin_img[:, edges[i][0]:edges[i][1]]
+        bin_crop = bin_crop[y:y+h, x:x+w]
+        char, scores = xor(bin_crop, xor_references)
+        print(char)
+        print(scores)
+        characters.append(char)
 
     return clean_characters(characters)
 
 
-def clean_image(plate):
-    if len(plate.shape) == 2:
-        height, width = plate.shape
-    else:
-        height, width, _ = plate.shape
-    plate = plate[int(height*0.1):int(height*0.9), int(width*0.03):int(width*0.97)]
-    return plate
+def xor(image, references):
+    """
+    Computes similarity based on XOR.
+    """
+    image = cv2.resize(image, (70, 70))
+    lowest_score = 10e5
+    lowest_char = "0"
+    scores = []
+    for char, refs in references.items():
+        score = 10e5
+        for ref in refs:
+            curr = np.count_nonzero(image ^ ref) / np.count_nonzero(ref)
+            scores.append((char, curr))
+            score = min(curr, score)
+
+        if score < lowest_score:
+            lowest_score = score
+            lowest_char = char
+
+    return lowest_char, scores
+
+
+def test_contour(image, image_orig, references):
+    """
+    Computes scores based on contours similarity.
+    """
+    contour = get_contours(image, image_orig)
+
+    char = None
+    score = 10_000
+    scores = []
+    for k, v in references.items():
+        sim = 0
+        if len(v):
+            for ref in v:
+                matches = cv2.matchShapes(contour, ref, 2, 0)
+                sim += matches
+            sim /= len(v)
+            scores.append((k, sim))
+            if sim < score:
+                score = sim
+                char = k
+    return char, scores
 
 
 def split(plate):
+    """
+    Finds lines on the binary image that will be used for splitting plate on individual characters.
+    """
     height, width = plate.shape
     edges = [(0, 0)]
     flag = True
@@ -239,111 +181,10 @@ def split(plate):
     return result
 
 
-def color_mask(plate):
-    color_bin = mask_colors_by_color(plate, compute_center=True)
-    filtered = cv2.morphologyEx(color_bin, cv2.MORPH_OPEN, np.ones((3, 3)))
-    # plt.imshow(filtered)
-    # plt.show()
-    top, bottom = 0, plate.shape[0]
-    left, right = 0, plate.shape[1]
-
-    for i in range(filtered.shape[0]):
-        if np.any(filtered[i]):
-            top = i
-            break
-
-    for i in range(filtered.shape[0] - 1, -1, -1):
-        if np.any(filtered[i]):
-            bottom = i + 1
-            break
-
-    for i in range(filtered.shape[1]):
-        if np.any(filtered[:, i]):
-            left = i
-            break
-
-    for i in range(filtered.shape[1] - 1, -1, -1):
-        if np.any(filtered[:, i]):
-            right = i + 1
-            break
-    
-    return top, bottom, left, right
-
-
-def rotate_image(image, angle):
-  image_center = tuple(np.array(image.shape[1::-1]) / 2)
-  rot_mat = cv2.getRotationMatrix2D(image_center, angle, 1.0)
-  result = cv2.warpAffine(image, rot_mat, image.shape[1::-1], flags=cv2.INTER_LINEAR)
-  return result
-
-
-def create_sift_descriptor(image):
-    if len(image.shape) == 3:
-        img = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    else:
-        img = image
-    sift = cv2.SIFT_create()
-
-    _, descriptors = sift.detectAndCompute(img, None)
-    return descriptors
-
-
-def get_contours(plate_image, orig):
-    # cv2.imshow('plate', plate_image)
-    # cv2.waitKey(5000)
-    canny_image = cv2.Canny(plate_image, 50, 100)
-    # canny_image = cv2.morphologyEx(canny_image, cv2.MORPH_DILATE, np.ones((3, 3)))
-    # cv2.imshow('canny', canny_image)
-    # cv2.waitKey(25)
-    contours, output_image = cv2.findContours(canny_image.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-
-    cnts = sorted(contours, key=lambda x: cv2.arcLength(x, False), reverse=True)[:30]
-    area = plate_image.shape[0] * plate_image.shape[1] * 0.1
-    cnts = list(filter(lambda x: cv2.contourArea(x) < area, cnts))
-
-    if len(cnts) == 0:
-        return 0, 0, len(canny_image[1]), len(canny_image[0])
-
-    bboxes = []
-    cv2.drawContours(orig, cnts, 0, (255, 0, 0), thickness=2)
-    cv2.imshow('contours', orig)
-    cv2.waitKey(1000)
-    # for i in range(len(cnts)):
-    #     bboxes.append(cv2.boundingRect(cnts[i]))
-    # filtered = list(filter(lambda x: x[2] / x[3] < 1 or abs(x[2] / x[3] - 2) < 0.2, bboxes))
-    return cv2.boundingRect(cnts[0])
-
-
-def create_sift_references(data_path):
-    references = {}
-    numbers_path = os.path.join(data_path, "SameSizeNumbers")
-    letters_path = os.path.join(data_path, "SameSizeLetters")
-    for folder in os.listdir(numbers_path):
-        folder_path = os.path.join(numbers_path, folder)
-        references[folder] = []
-        for file in os.listdir(folder_path):
-            if file.endswith('bmp'):
-                continue
-
-            image = cv2.imread(os.path.join(folder_path, file))
-            sift = create_sift_descriptor(image)
-            references[folder].append(sift)
-
-    for folder in os.listdir(letters_path):
-        folder_path = os.path.join(letters_path, folder)
-        references[folder] = []
-        for file in os.listdir(folder_path):
-            if file.endswith('bmp'):
-                continue
-
-            image = cv2.imread(os.path.join(folder_path, file))
-            sift = create_sift_descriptor(image)
-            references[folder].append(sift)
-
-    return references
-
-
 def test_sift(image, references):
+    """
+    Computes scores based on SIFT descriptors similarity.
+    """
     descriptor = create_sift_descriptor(image)
     bf = cv2.BFMatcher(cv2.NORM_L1, crossCheck=True)
 
@@ -370,13 +211,11 @@ def test_sift(image, references):
 
 def load_data(data_path):
     images = []
-    references = create_sift_references('dataset')
+    names = []
     for file in sorted(os.listdir(data_path)):
         image = cv2.imread(os.path.join(data_path, file))
         images.append(image)
-        # cv2.imshow('Plate', image)
-        # cv2.waitKey(1000)
-        # print(segment_plate(image, references))
+        names.append(int(file.split('_')[-1].split('.')[0]))
 
     return images
 
