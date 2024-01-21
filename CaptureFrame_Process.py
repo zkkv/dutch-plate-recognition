@@ -7,6 +7,7 @@ import numpy as np
 from helpers.display import display_complete_video
 from helpers.display import display_single_frame
 from helpers.display import display_image
+from helpers.display import display_multiple_images
 from helpers.display import display_hsi_histograms_and_images
 from helpers.display import display_multiple_images_with_masks
 from helpers.display import display_image_with_mask
@@ -40,7 +41,7 @@ def CaptureFrame_Process(file_path, sample_frequency, save_path):
 
     # TODO: Implement actual algorithms for Localizing Plates
 
-    # isolated_single = Localization.plate_detection(frames[70])
+    # isolated_plates_single = Localization.plate_detection(frames[70])
     # display_image(isolated_single)
     # isolated_single = Localization.plate_detection(frames[900])
     # isolated_single = Localization.plate_detection(frames[370])
@@ -50,14 +51,19 @@ def CaptureFrame_Process(file_path, sample_frequency, save_path):
     # prediction_single = Recognize.segment_and_recognize([isolated_single])
 
     isolated_plates = []
+    frame_nums = []
     for i in range(len(frames)):
         cropped = Localization.plate_detection(frames[i])
-        if cropped is None:
-            isolated_plates.append(np.zeros((1, 1, 1)))
-        elif cropped.shape[0] > 0 and cropped.shape[1] > 0:
-            isolated_plates.append(cropped)
+        if cropped is None or len(cropped) == 0:
+            continue
+        for plate in cropped:
+            if plate is None:
+                isolated_plates.append(np.zeros((1, 1, 1)))
+            elif plate.shape[0] > 0 and plate.shape[1] > 0:
+                isolated_plates.append(plate)
+            frame_nums.append(i)
 
-    predictions, inds = Recognize.segment_and_recognize(isolated_plates, np.arange(len(isolated_plates)))
+    predictions, inds = Recognize.segment_and_recognize(isolated_plates, frame_nums)
     frames_numbers = []
     frames = np.arange(len(isolated_plates))
     filtered_timestamps = []
@@ -67,6 +73,7 @@ def CaptureFrame_Process(file_path, sample_frequency, save_path):
     frames_numbers = np.array(frames_numbers)
     # for plate in isolated_plates:
     #     display_image(plate)
+
 
     # display_complete_video(isolated_plates)
 

@@ -32,7 +32,8 @@ def segment_and_recognize(plate_images, frames_numbers):
     start = 0
     counts = [{} for _ in range(8)]
     filtered_frames_numbers = []
-    for ind, plate in enumerate(plate_images):
+    ind = 0
+    for plate in plate_images:
         # cv2.imshow('Plate', plate)
         # cv2.waitKey(1000)
         characters = segment_plate(plate, xor_references)
@@ -48,7 +49,7 @@ def segment_and_recognize(plate_images, frames_numbers):
                         chars.append(list(tmp.keys())[-1])
                     result.append("".join(chars))
                     filtered_frames_numbers.append(start)
-                    start = ind
+                    start = frames_numbers[ind]
                     # print(result[-1])
             last = a
 
@@ -56,7 +57,7 @@ def segment_and_recognize(plate_images, frames_numbers):
                 if characters[i] not in counts[i]:
                     counts[i][characters[i]] = 0
                 counts[i][characters[i]] += 1
-
+        ind += 1
     return result, filtered_frames_numbers
 
 
