@@ -7,6 +7,7 @@ import numpy as np
 from helpers.display import display_complete_video
 from helpers.display import display_single_frame
 from helpers.display import display_image
+from helpers.display import display_multiple_images
 from helpers.display import display_hsi_histograms_and_images
 from helpers.display import display_multiple_images_with_masks
 from helpers.display import display_image_with_mask
@@ -37,22 +38,25 @@ def CaptureFrame_Process(file_path, sample_frequency, save_path):
 
     # TODO: Implement actual algorithms for Localizing Plates
 
-    # isolated_single = Localization.plate_detection(frames[70])
+    # isolated_plates_single = Localization.plate_detection(frames[70])
     # display_image(isolated_single)
-    # isolated_single = Localization.plate_detection(frames[900])
-    isolated_single = Localization.plate_detection(frames[370])
-    display_image(isolated_single)
+    # isolated_plates_single = Localization.plate_detection(frames[900])
+    # display_multiple_images(isolated_plates_single)
+    # isolated_single = Localization.plate_detection(frames[370])
+    # isolated_plates_single = Localization.plate_detection(frames[1700])
+    # display_multiple_images(isolated_plates_single)
 
-    # isolated_plates = []
-    # for i in range(len(frames)):
-    #     cropped = Localization.plate_detection(frames[i])
-    #     if cropped is None:
-    #         isolated_plates.append(np.zeros((1, 1, 1)))
-    #     elif cropped.shape[0] > 0 and cropped.shape[1] > 0:
-    #         isolated_plates.append(cropped)
-    #
-    # for plate in isolated_plates:
-    #     display_image(plate)
+    isolated_plates = []
+    for i in range(len(frames)):
+        cropped_plates = Localization.plate_detection(frames[i])
+        for plate in cropped_plates:
+            if plate is None:
+                isolated_plates.append(np.zeros((1, 1, 1)))
+            elif plate.shape[0] > 0 and plate.shape[1] > 0:
+                isolated_plates.append(plate)
+
+    for plate in isolated_plates:
+        display_image(plate)
 
     # display_complete_video(isolated_plates)
 

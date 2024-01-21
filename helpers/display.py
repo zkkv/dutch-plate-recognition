@@ -16,6 +16,11 @@ def display_complete_video(frames):
             break
 
 
+def display_multiple_images(images):
+    for image in images:
+        display_image(image)
+
+
 def display_single_frame(frames, frame_number):
     if frame_number < 0 or frame_number >= len(frames):
         raise Exception("Frame number out of bounds")

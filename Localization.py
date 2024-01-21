@@ -161,11 +161,39 @@ def detect_edges(image):
 def find_bbox_using_contours(canny_image, original_image=None):
     contours, output_image = cv2.findContours(canny_image.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
     cnts = sorted(contours, key=cv2.contourArea, reverse=True)[:30]
-    # cv2.drawContours(original_image, cnts, 0, (0, 255, 0), 3)
     if len(cnts) == 0:
         return 0, 0, len(canny_image[1]), len(canny_image[0])
-    x, y, w, h = cv2.boundingRect(cnts[0])
-    return x, y, w, h
+
+    min_allowed_area = 95 * 20
+    bboxes = []
+    max_num_of_bboxes = 3
+    max_allowed_edges = 4
+    min_allowed_ratio = 1
+    max_allowed_ratio = 535 / 110
+    # cv2.drawContours(original_image, cnts, -1, (0, 255, 0), 2)
+
+    for contour in cnts:
+        if len(bboxes) >= max_num_of_bboxes:
+            break
+        x, y, w, h = cv2.boundingRect(contour)
+        area = w * h
+        perimeter = cv2.arcLength(contour, True)
+        max_allowed_perimeter = 3 * (w + h)     # Some margin required
+        edges_count = cv2.approxPolyDP(contour, 0.1 * perimeter, True)
+        if h == 0:
+            continue
+        ratio = w / h
+        if area >= min_allowed_area \
+                and perimeter <= max_allowed_perimeter \
+                and len(edges_count) <= max_allowed_edges \
+                and max_allowed_ratio >= ratio >= min_allowed_ratio:
+            # cv2.drawContours(original_image, [contour], -1, (255, 0, 255), 2)
+            bboxes.append((x, y, w, h))
+
+    # for bbox in bboxes:
+    #     draw_bbox_over_image(bbox[0], bbox[1], bbox[2], bbox[3], original_image)
+
+    return bboxes
 
 
 def find_lines_using_hough(canny_image):
@@ -246,23 +274,32 @@ def plate_detection(image, return_bbox: bool = False):
     canny_image = cv2.Canny(image_masked, 10, 160)
     canny_image_fat = cv2.morphologyEx(canny_image, cv2.MORPH_DILATE, np.ones((5, 5)))
 
-    x, y, w, h = find_bbox_using_contours(canny_image_fat)
+    final_bboxes = []
+    bboxes_params = find_bbox_using_contours(canny_image_fat, image)
+    min_allowed_ratio = 3 / 2
+    max_allowed_ratio = 530 / 110
+    for bbox_param in bboxes_params:
+        x, y, w, h = bbox_param
+        bbox = crop_image_with_margin(x, y, w, h, 0, 0, image)
+        # bbox = crop_image_with_margin(x, y, w, h, 0.1, 0.1, image)
+        bbox_canny = crop_image_with_margin(x, y, w, h, 0.1, 0.1, canny_image)
+        lines = find_lines_using_hough(bbox_canny)
 
-    bbox = crop_image_with_margin(x, y, w, h, 0, 0, image)
-    # bbox = crop_image_with_margin(x, y, w, h, 0.1, 0.1, image)
-    bbox_canny = crop_image_with_margin(x, y, w, h, 0.1, 0.1, canny_image)
-    lines = find_lines_using_hough(bbox_canny)
+        # draw_lines_on_image(lines, bbox)
+        angle = get_rotation_angle_from_lines(lines)
+        rotated_bbox = ndimage.rotate(bbox, angle)
 
-    # draw_lines_on_image(lines, bbox)
-    angle = get_rotation_angle_from_lines(lines)
-    rotated_bbox = ndimage.rotate(bbox, angle)
+        binarized = mask_image_by_color(rotated_bbox)
+        opened = cv2.morphologyEx(binarized, cv2.MORPH_OPEN, np.ones((3, 3)))
+        x, y, w, h = cv2.boundingRect(cv2.findNonZero(opened))
+        if h == 0:
+            continue
+        ratio = w / h
+        if max_allowed_ratio >= ratio >= min_allowed_ratio:
+            final_bbox = crop_image_with_margin(x, y, w, h, 0, 0, rotated_bbox)
+            final_bboxes.append(final_bbox)
 
-    binarized = mask_image_by_color(rotated_bbox)
-    opened = cv2.morphologyEx(binarized, cv2.MORPH_OPEN, np.ones((3, 3)))
-    x, y, w, h = cv2.boundingRect(cv2.findNonZero(opened))
-    final_bbox = crop_image_with_margin(x, y, w, h, 0, 0, rotated_bbox)
-
-    return final_bbox
+    return final_bboxes
 
 
 if __name__ == '__main__':
