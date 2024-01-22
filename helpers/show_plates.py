@@ -6,13 +6,13 @@ import argparse
 
 def get_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--file_path', type=str, default='dummytestvideo.avi')
+    parser.add_argument('--file_path', type=str, default='../dataset/dummytestvideo.avi')
     args = parser.parse_args()
     return args
 
 # Create a VideoCapture object and read from input file
 # If the input is the camera, pass 0 instead of the video file name
-cap = cv2.VideoCapture('dummytestvideo.avi')
+cap = cv2.VideoCapture('../dataset/dummytestvideo.avi')
 
 # Check if camera opened successfully
 if (cap.isOpened()== False): 
@@ -24,9 +24,9 @@ while(cap.isOpened()):
   ret, frame = cap.read()
   if ret == True:
     #dummy arguments for sample frequency and save_path should be changed
-    detections = plate_detection(frame)
+    # detections = plate_detection(frame)
     # Display the resulting frame
-    cv2.imshow('Frame',detections)
+    cv2.imshow('Frame', frame)
 
     # Press Q on keyboard to  exit
     if cv2.waitKey(25) & 0xFF == ord('q'):
