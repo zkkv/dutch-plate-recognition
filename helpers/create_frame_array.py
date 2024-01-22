@@ -19,10 +19,10 @@ def create_frame_array(filepath, rate=24):
 
     while has_returned_frame:
         has_returned_frame, frame = cap.read()
-        if has_returned_frame and (counter + 1) % rate == 0:
+        if has_returned_frame and counter % rate == 0:
             frame_list.append(frame)
             timestamp_list.append(cap.get(cv2.CAP_PROP_POS_MSEC) / 1000)
-            counter += 1
+        counter += 1
     cap.release()
     cv2.destroyAllWindows()
     return np.array(frame_list), np.array(timestamp_list)

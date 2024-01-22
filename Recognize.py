@@ -114,7 +114,7 @@ def segment_plate(plate, xor_references):
         bin_crop = bin_crop[y:y+h, x:x+w]
         # cv2.imshow('debug', bin_crop)
         # cv2.waitKey(1000)
-        char, scores = xor(bin_crop, xor_references, True)
+        char, scores = xor(bin_crop, xor_references, False)
         # print(char)
         # print(scores)
         characters.append(char)

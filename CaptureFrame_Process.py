@@ -35,7 +35,8 @@ def CaptureFrame_Process(file_path, sample_frequency, save_path):
 
     print("STARTED")
     # TODO: Read frames from the video (saved at `file_path`) by making use of `sample_frequency`
-    frames, timestamps = create_frame_array(file_path, 1)
+    rate = 1
+    frames, timestamps = create_frame_array(file_path, rate)
     # frames = frames[170:210]
     # frames, frames_numbers = Recognize.load_data('dataset/localization-results')
     # print(frames_numbers)
@@ -66,10 +67,9 @@ def CaptureFrame_Process(file_path, sample_frequency, save_path):
 
     predictions, inds = Recognize.segment_and_recognize(isolated_plates, frame_nums)
     frames_numbers = []
-    frames = np.arange(len(isolated_plates))
     filtered_timestamps = []
     for ind in inds:
-        frames_numbers.append(frames[ind])
+        frames_numbers.append(ind * rate)
         filtered_timestamps.append(timestamps[ind])
     frames_numbers = np.array(frames_numbers)
     # for plate in isolated_plates:
