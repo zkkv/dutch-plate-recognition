@@ -1,4 +1,13 @@
-# License plate recognition template
+# License plate recognition
+
+## Description
+A Dutch plate recognition written in Python using only image processing techniques and no machine learning. The process involves:
+- Plate localization
+- Character segmentation
+- Character recognition
+- Adjusting the output
+
+The system works well on videos of Dutch license plates up to about 10m distance.
 
 ## Input
 You run your video by putting under ``dataset/trainingvideo.avi``.  
